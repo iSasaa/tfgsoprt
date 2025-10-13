@@ -1,4 +1,4 @@
-// src-tfg/app/_components/InteractiveCanvas.tsx
+// src/app/_components/InteractiveCanvas.tsx
 
 "use client";
 
@@ -10,8 +10,6 @@ import Konva from "konva";
 // --- Definim els tipus per a més seguretat amb TypeScript ---
 type Frame = { x: number; y: number; time: number };
 type Recordings = { [shapeId: string]: Frame[] };
-type RecordingMode = 'drag' | 'click'; // NOU: Tipus per al mètode de gravació
-
 type ShapeCommonProps = {
   id: string;
   x: number;
@@ -28,12 +26,14 @@ type RectangleProps = ShapeCommonProps & { width: number; height: number };
 type CircleProps = ShapeCommonProps & { radius: number };
 type Shape = RectangleProps | CircleProps;
 
+
 // --- Component per a la imatge de fons ---
 const BackgroundImage = () => {
   const [image] = useImage("/img/camp_hoquei.png");
   if (!image) return null;
   return <Image image={image} width={window.innerWidth} height={window.innerHeight} />;
 };
+
 
 // --- Component principal del nostre llenç interactiu ---
 export const InteractiveCanvas = () => {
@@ -46,17 +46,14 @@ export const InteractiveCanvas = () => {
   const [recordings, setRecordings] = useState<Recordings>({});
   const [showPath, setShowPath] = useState(false);
   const [showTrail, setShowTrail] = useState(false);
+  // NOU: Estat per guardar els punts de les línies de l'estela
   const [trailLines, setTrailLines] = useState<Record<string, number[]>>({});
-  // NOU: Estat per seleccionar el mètode de gravació
-  const [recordingMode, setRecordingMode] = useState<RecordingMode>('drag');
 
   // --- REFS PER ACCEDIR A L'ESTAT ACTUALITZAT DES DELS ESDEVENIMENTS ---
   const recordingsRef = useRef(recordings);
   const isRecordingRef = useRef(isRecording);
   const selectedShapeIdRef = useRef(selectedShapeId);
   const showTrailRef = useRef(showTrail);
-  // NOU: Ref per al mètode de gravació
-  const recordingModeRef = useRef(recordingMode);
 
   // Mantenim els refs sempre sincronitzats amb l'últim estat
   useEffect(() => {
@@ -64,17 +61,17 @@ export const InteractiveCanvas = () => {
     isRecordingRef.current = isRecording;
     selectedShapeIdRef.current = selectedShapeId;
     showTrailRef.current = showTrail;
-    recordingModeRef.current = recordingMode;
   });
   
-  // Referències i constants
+  // Referències per a Konva i temporitzadors
   const recordStartTimeRef = useRef<number>(0);
   const animationRef = useRef<Konva.Animation | null>(null);
   const layerRef = useRef<Konva.Layer>(null);
   const loopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const trailLayerRef = useRef<Konva.Layer>(null);
+  // NOU: Ref per controlar la freqüència d'actualització de l'estela (optimització)
   const lastTrailUpdateTimeRef = useRef<Record<string, number>>({});
-  const PIXELS_PER_SECOND = 200; // Velocitat per al mètode de clics
+
 
   // --- LÒGICA DE LA GRAVACIÓ ---
   const handleRecordToggle = () => {
@@ -85,35 +82,28 @@ export const InteractiveCanvas = () => {
     
     if (!isRecording) {
       setIsRecording(true);
-      // En mode 'clic', no iniciem la reproducció immediatament
-      if (recordingMode === 'drag') {
-        setIsPlaying(true);
-      }
+      setIsPlaying(true); 
       recordStartTimeRef.current = Date.now();
-      // Assegurem que la posició inicial es desa per al mode 'clic'
-      const shape = shapes.find(s => s.id === selectedShapeId);
-      if (shape) {
-        const initialFrame = { x: shape.x, y: shape.y, time: 0 };
-        setRecordings(prev => ({ ...prev, [selectedShapeId]: [initialFrame] }));
-      }
+      setRecordings(prev => ({ ...prev, [selectedShapeId]: [] }));
     } else {
       setIsRecording(false);
       setIsPlaying(false);
     }
   };
   
-  // MODIFICAT: Aquests esdeveniments només funcionen en mode 'drag'
   const handleDragStart = (e: Konva.KonvaEventObject<DragEvent>) => {
-    if (isRecordingRef.current && recordingModeRef.current === 'drag' && e.target.id() === selectedShapeIdRef.current) {
+    if (isRecordingRef.current && e.target.id() === selectedShapeIdRef.current) {
       const frame: Frame = { x: e.target.x(), y: e.target.y(), time: 0 };
       setRecordings(prev => ({ ...prev, [selectedShapeIdRef.current!]: [frame] }));
     }
   };
 
   const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
-    if (isRecordingRef.current && recordingModeRef.current === 'drag' && e.target.id() === selectedShapeIdRef.current) {
+    if (isRecordingRef.current && e.target.id() === selectedShapeIdRef.current) {
       const newFrame: Frame = {
-        x: e.target.x(), y: e.target.y(), time: Date.now() - recordStartTimeRef.current,
+        x: e.target.x(),
+        y: e.target.y(),
+        time: Date.now() - recordStartTimeRef.current,
       };
       setRecordings(prev => {
         const currentFrames = prev[selectedShapeIdRef.current!] ?? [];
@@ -123,99 +113,220 @@ export const InteractiveCanvas = () => {
   };
 
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
-    if (isRecordingRef.current && recordingModeRef.current === 'drag' && e.target.id() === selectedShapeIdRef.current) {
+    if (isRecordingRef.current && e.target.id() === selectedShapeIdRef.current) {
       setIsRecording(false);
       setIsPlaying(false);
     }
   };
 
-  // NOU: Gestor de clics a l'escenari per al mode 'click'
-  const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent | PointerEvent>) => {
-    if (!isRecordingRef.current || recordingModeRef.current !== 'click' || !selectedShapeIdRef.current) {
-      return;
-    }
-    // Ignorem els clics sobre les formes existents
-    if (e.target !== e.target.getStage()) {
-      return;
-    }
-
-    const stage = e.target.getStage();
-    if (!stage) return;
-    const point = stage.getPointerPosition();
-    if (!point) return;
-
-    const shapeNode = layerRef.current?.findOne(`#${selectedShapeIdRef.current}`);
-    if (!shapeNode) return;
-
-    setRecordings(prev => {
-      const currentFrames = prev[selectedShapeIdRef.current!] ?? [];
-      if (currentFrames.length === 0) return prev; // No hauria de passar, però per seguretat
-
-      const lastFrame = currentFrames[currentFrames.length - 1]!;
-      const newFrames: Frame[] = [...currentFrames];
-      
-      const distance = Math.sqrt(Math.pow(point.x - lastFrame.x, 2) + Math.pow(point.y - lastFrame.y, 2));
-      const duration = (distance / PIXELS_PER_SECOND) * 1000; // ms
-
-      const steps = Math.max(1, Math.floor(duration / 16)); // ~60fps
-      
-      for (let i = 1; i <= steps; i++) {
-        const t = i / steps;
-        const x = lastFrame.x + (point.x - lastFrame.x) * t;
-        const y = lastFrame.y + (point.y - lastFrame.y) * t;
-        const time = lastFrame.time + duration * t;
-        newFrames.push({ x, y, time });
+  const getMaxRecordingDuration = () => {
+    let maxDuration = 0;
+    Object.values(recordingsRef.current).forEach((frames) => {
+      if (frames.length > 0) {
+        const lastFrameTime = frames[frames.length - 1]!.time;
+        if (lastFrameTime > maxDuration) {
+          maxDuration = lastFrameTime;
+        }
       }
-
-      return { ...prev, [selectedShapeIdRef.current!]: newFrames };
     });
+    return maxDuration;
   };
 
 
-  const getMaxRecordingDuration = () => { /* ... (sense canvis) */ return 0; };
-  useEffect(() => { /* ... (sense canvis) */ }, [isPlaying, shapes]);
-  useEffect(() => { /* ... (sense canvis) */ }, [showTrail]);
-  const addShape = (type: 'rect' | 'circle') => { /* ... (sense canvis) */ };
+  // --- LÒGICA DE LA REPRODUCCIÓ ---
+  useEffect(() => {
+    const layer = layerRef.current;
+    if (!layer) return;
 
+    if (isPlaying) {
+      animationRef.current = new Konva.Animation((frame) => {
+        if (!frame || !layer) return;
+        const elapsedTime = frame.time;
+
+        Object.entries(recordingsRef.current).forEach(([shapeId, frames]: [string, Frame[]]) => {
+          if (shapeId === selectedShapeIdRef.current && isRecordingRef.current) return;
+          const shapeNode = layer.findOne<Konva.Shape>(`#${shapeId}`);
+          if (!shapeNode || frames.length === 0) return;
+          
+          let currentFrame = frames[0]!;
+          for (const recordedFrame of frames) {
+            if (recordedFrame.time <= elapsedTime) {
+              currentFrame = recordedFrame;
+            } else {
+              break;
+            }
+          }
+          shapeNode.position({ x: currentFrame.x, y: currentFrame.y });
+
+          // MODIFICAT: Nova lògica per a l'estela de línia
+          if (showTrailRef.current && !isRecordingRef.current) {
+            const now = Date.now();
+            // Optimització: només afegim un punt a la línia cada 50ms
+            if (now - (lastTrailUpdateTimeRef.current[shapeId] || 0) > 50) {
+              lastTrailUpdateTimeRef.current[shapeId] = now;
+              const shapeConfig = shapes.find(s => s.id === shapeId);
+              if (!shapeConfig) return;
+
+              // Calculem el centre de la forma per dibuixar la línia
+              const offsetX = 'radius' in shapeConfig ? shapeConfig.radius : shapeConfig.width / 2;
+              const offsetY = 'radius' in shapeConfig ? shapeConfig.radius : shapeConfig.height / 2;
+
+              setTrailLines(prevLines => {
+                const existingPoints = prevLines[shapeId] || [];
+                const newPoints = [...existingPoints, shapeNode.x() + offsetX, shapeNode.y() + offsetY];
+                return { ...prevLines, [shapeId]: newPoints };
+              });
+            }
+          }
+        });
+      }, layer);
+      animationRef.current.start();
+      
+      if (!isRecordingRef.current) {
+        const maxDuration = getMaxRecordingDuration();
+        if (maxDuration > 0) {
+          loopTimeoutRef.current = setTimeout(() => {
+            setIsPlaying(false);
+            setTimeout(() => setIsPlaying(true), 50); 
+          }, maxDuration + 3000);
+        }
+      }
+
+    } else { // Quan isPlaying és false
+      animationRef.current?.stop();
+      setTrailLines({}); // Netegem les línies de l'estela
+      lastTrailUpdateTimeRef.current = {}; // Reiniciem el temporitzador de l'estela
+      Object.entries(recordingsRef.current).forEach(([shapeId, frames]: [string, Frame[]]) => {
+        const shapeNode = layer.findOne(`#${shapeId}`);
+        if (shapeNode && frames.length > 0) {
+          shapeNode.position({ x: frames[0]!.x, y: frames[0]!.y });
+        }
+      });
+    }
+
+    return () => {
+      animationRef.current?.stop();
+      if (loopTimeoutRef.current) clearTimeout(loopTimeoutRef.current);
+    };
+  }, [isPlaying, shapes]); // Afegim `shapes` a les dependències per accedir a la seva info
+
+  // NOU: Efecte per netejar les línies si l'usuari desactiva la opció
+  useEffect(() => {
+    if (!showTrail) {
+      setTrailLines({});
+    }
+  }, [showTrail]);
+
+
+  // --- Funció per afegir formes ---
+  const addShape = (type: 'rect' | 'circle') => {
+    const shapeId = `${type}-${shapes.length}`;
+    const newX = window.innerWidth - 250;
+    const newY = 150 + (shapes.length % 5) * 80;
+
+    const newShape: Shape = type === 'rect' ? {
+      id: shapeId, x: newX, y: newY, width: 50, height: 50, fill: 'red', draggable: true,
+      onClick: (e) => setSelectedShapeId(e.target.id()), onTap: (e) => setSelectedShapeId(e.target.id()),
+      onDragStart: handleDragStart, onDragMove: handleDragMove, onDragEnd: handleDragEnd,
+    } : {
+      id: shapeId, x: newX, y: newY, radius: 25, fill: 'blue', draggable: true,
+      onClick: (e) => setSelectedShapeId(e.target.id()), onTap: (e) => setSelectedShapeId(e.target.id()),
+      onDragStart: handleDragStart, onDragMove: handleDragMove, onDragEnd: handleDragEnd,
+    };
+    setShapes([...shapes, newShape]);
+  };
+  
   return (
     <div>
-      <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 1, /* ... */ }}>
-        {/* ... (Botons d'afegir formes) */}
-        
-        {/* NOU: Secció per triar el mètode de gravació */}
+      {/* --- CONTROLS --- */}
+      <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 1, background: 'rgba(0,0,0,0.5)', padding: '10px', borderRadius: '5px', color: 'white' }}>
+        <div>
+          <button onClick={() => addShape('rect')} style={{ marginRight: '10px' }}>+ Rectangle</button>
+          <button onClick={() => addShape('circle')}>+ Cercle</button>
+        </div>
+        <div style={{ marginTop: '10px' }}>
+          <button onClick={handleRecordToggle} style={{ marginRight: '10px', background: isRecording ? 'lightcoral' : 'lightgreen' }}>
+            {isRecording ? 'Aturar Gravació' : 'Gravar'}
+          </button>
+          <button onClick={() => setIsPlaying(true)} disabled={isPlaying || isRecording} style={{ marginRight: '10px' }}>Play ▶</button>
+          <button onClick={() => setIsPlaying(false)} disabled={!isPlaying || isRecording}>Reiniciar 🔄</button>
+        </div>
+
         <div style={{ marginTop: '15px', borderTop: '1px solid white', paddingTop: '10px' }}>
-            <h4 style={{ margin: '0 0 10px 0' }}>Mètode de Gravació</h4>
+            <h4 style={{ margin: '0 0 10px 0' }}>Opcions de Visualització</h4>
             <div>
                 <label>
-                    <input type="radio" value="drag" checked={recordingMode === 'drag'} onChange={() => setRecordingMode('drag')} disabled={isRecording} />
-                     Arrossegar i deixar anar
+                    <input type="checkbox" checked={showPath} onChange={(e) => setShowPath(e.target.checked)} />
+                    Mostrar recorregut estàtic
                 </label>
             </div>
             <div style={{ marginTop: '5px' }}>
                 <label>
-                    <input type="radio" value="click" checked={recordingMode === 'click'} onChange={() => setRecordingMode('click')} disabled={isRecording} />
-                     Clicar punts 📍
+                    <input type="checkbox" checked={showTrail} onChange={(e) => setShowTrail(e.target.checked)} />
+                    Mostrar estela (línia dinàmica) ✨
                 </label>
             </div>
         </div>
 
-        <div style={{ marginTop: '10px' }}>
-          <button onClick={handleRecordToggle} style={{ /* ... */ }}>
-            {isRecording ? 'Aturar Gravació' : 'Gravar'}
-          </button>
-          {/* ... (Botons Play/Reiniciar) */}
+        <div style={{ marginTop: '10px', fontSize: '12px' }}>
+          <p>Estat: {isRecording ? 'Gravant...' : ''}{isPlaying ? 'Reproduint...' : ''}{!isRecording && !isPlaying ? 'Inactiu' : ''}</p>
+          <p>Forma seleccionada: <strong>{selectedShapeId ?? 'Cap'}</strong></p>
         </div>
-
-        {/* ... (Opcions de visualització i estat) */}
       </div>
 
-      <Stage 
-        width={window.innerWidth} 
-        height={window.innerHeight}
-        onClick={handleStageClick} // NOU
-        onTap={handleStageClick}   // NOU
-      >
-        {/* ... (Capes) */}
+      <Stage width={window.innerWidth} height={window.innerHeight}>
+        <Layer>
+          <BackgroundImage />
+        </Layer>
+        {/* MODIFICAT: La capa d'esteles ara renderitza les línies des de l'estat */}
+        <Layer ref={trailLayerRef}>
+          {Object.entries(trailLines).map(([shapeId, points]) => {
+            const shape = shapes.find(s => s.id === shapeId);
+            if (!shape) return null;
+            return (
+              <Line
+                key={`${shapeId}-trail`}
+                points={points}
+                stroke={shape.fill}
+                strokeWidth={3}
+                tension={0.5}
+                dash={[1, 10]} // Línia discontínua (1px visible, 10px espai)
+                lineCap="round"
+                listening={false}
+              />
+            );
+          })}
+        </Layer>
+        <Layer ref={layerRef}>
+          <>
+            {showPath && Object.entries(recordings).map(([shapeId, frames]) => {
+                if (frames.length < 2) return null;
+                const shape = shapes.find(s => s.id === shapeId);
+                if (!shape) return null;
+                
+                const points = frames.flatMap(frame => [frame.x + ('radius' in shape ? shape.radius : shape.width / 2), frame.y + ('radius' in shape ? shape.radius : shape.height / 2)]);
+
+                return (
+                    <Line
+                        key={`${shapeId}-path`}
+                        points={points}
+                        stroke={shape.fill}
+                        strokeWidth={2}
+                        tension={0.5}
+                        dash={[10, 5]}
+                        listening={false}
+                    />
+                );
+            })}
+
+            {shapes.map((shape) => {
+              const isSelected = shape.id === selectedShapeId;
+              const commonProps = { ...shape, stroke: isSelected ? 'yellow' : 'black', strokeWidth: isSelected ? 3 : 1 };
+              if ('radius' in shape) { return <Circle key={shape.id} {...commonProps} />; }
+              return <Rect key={shape.id} {...commonProps} />;
+            })}
+          </>
+        </Layer>
       </Stage>
     </div>
   );
