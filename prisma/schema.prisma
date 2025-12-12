@@ -63,6 +63,40 @@ model User {
     accounts      Account[]
     sessions      Session[]
     posts         Post[]
+    boards        Board[]
+    folders       Folder[]
+    password      String?
+}
+
+model Board {
+    id        String   @id @default(cuid())
+    title     String
+    sport     String   @default("hockey")
+    data      String   // Json string for Konva state
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    
+    userId    String
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    
+    folderId  String?
+    folder    Folder?  @relation(fields: [folderId], references: [id])
+
+    @@index([userId])
+}
+
+model Folder {
+    id        String   @id @default(cuid())
+    name      String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    
+    userId    String
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    
+    boards    Board[]
+
+    @@index([userId])
 }
 
 model VerificationToken {
