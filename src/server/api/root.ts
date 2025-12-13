@@ -9,6 +9,8 @@ import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 import { userRouter } from "~/server/api/routers/user";
 import { boardRouter } from "~/server/api/routers/board";
 
+import { clubRouter } from "~/server/api/routers/club";
+
 /**
  * This is the primary router for your server.
  *
@@ -18,6 +20,7 @@ export const appRouter = createTRPCRouter({
   post: postRouter,
   user: userRouter,
   board: boardRouter,
+  club: clubRouter,
 });
 
 // export type definition of API

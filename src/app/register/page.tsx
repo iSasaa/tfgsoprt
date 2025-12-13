@@ -17,6 +17,23 @@ export default function RegisterPage() {
             router.push("/login?registered=true");
         },
         onError: (e) => {
+            try {
+                // Try to parse Zod error array
+                // Example: [ { "validation": "email", ... }, { "code": "too_small", ... } ]
+                const issues = JSON.parse(e.message);
+                if (Array.isArray(issues)) {
+                    // Create a friendly list of errors
+                    const messages = issues.map((issue: any) => {
+                        if (issue.validation === "email") return "Please enter a valid email address.";
+                        if (issue.code === "too_small" && issue.path?.includes("password")) return "Password must be at least 6 characters.";
+                        return issue.message || "Invalid input.";
+                    });
+                    setError(messages.join(" "));
+                    return;
+                }
+            } catch {
+                // Not JSON, use raw message
+            }
             setError(e.message);
         },
     });
@@ -40,12 +57,12 @@ export default function RegisterPage() {
                         Home &gt; Register
                     </div>
                     <h1 className="text-5xl font-bold uppercase leading-tight tracking-tight">
-                        Join Now <br />
-                        <span className="text-orange-400">For Free</span>
+                        Join the <br />
+                        <span className="text-orange-400">Revolution</span>
                     </h1>
 
                     <p className="text-lg text-slate-300 max-w-md">
-                        Access over 15,000 drills, create professional plans, and collaborate with your team instantly.
+                        Stop relying on static papers. Start using advanced digital tools for professional tactical analysis.
                     </p>
 
                     {/* Elements flotants decoratius (Mockups) */}
@@ -139,7 +156,7 @@ export default function RegisterPage() {
                                 className="mt-1 h-4 w-4 rounded border-slate-300 text-orange-400 focus:ring-orange-400"
                             />
                             <p className="text-sm text-slate-500">
-                                I agree to the Sportplan <a href="#" className="font-bold hover:underline">Terms of Service</a> and <a href="#" className="font-bold hover:underline">Privacy Policy</a>.
+                                I agree to the TactixPro <a href="#" className="font-bold hover:underline">Terms of Service</a> and <a href="#" className="font-bold hover:underline">Privacy Policy</a>.
                             </p>
                         </div>
 

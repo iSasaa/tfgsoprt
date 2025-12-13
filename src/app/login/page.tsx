@@ -42,11 +42,11 @@ export default function LoginPage() {
 
                 <div className="relative z-10 max-w-xl space-y-6">
                     <div className="text-xs font-semibold tracking-wider text-slate-300 uppercase">
-                        Home &gt; Login
+                        TactixPro &gt; Coach Access
                     </div>
                     <h1 className="text-5xl font-bold uppercase leading-tight tracking-tight">
-                        Welcome Back <br />
-                        <span className="text-slate-200">to Sportplan</span>
+                        Next Gen <br />
+                        <span className="text-orange-500">Sports Planning</span>
                     </h1>
 
                     {/* Elements flotants decoratius (Mockups) */}
@@ -136,7 +136,7 @@ export default function LoginPage() {
                     </form>
 
                     <div className="mt-6 text-center text-sm text-slate-500">
-                        New to Sportplan?{" "}
+                        New to TactixPro?{" "}
                         <Link href="/register" className="font-bold text-orange-400 hover:underline">
                             Register for FREE
                         </Link>

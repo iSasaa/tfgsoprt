@@ -14,7 +14,7 @@ export default async function HomePage() {
             <header className="relative z-50 mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
                 <div className="flex items-center gap-2">
                     <div className="text-2xl font-bold tracking-tighter text-slate-700">
-                        Smart<span className="italic text-slate-500">plan</span>
+                        Tactix<span className="italic text-orange-500">Pro</span>
                     </div>
                 </div>
 
@@ -24,13 +24,13 @@ export default async function HomePage() {
                             <UserNav user={session.user} theme="light" />
                             <Link
                                 href="/dashboard"
-                                className="rounded bg-orange-500 px-4 py-2 text-sm font-bold text-white hover:bg-orange-600"
+                                className="rounded bg-orange-500 px-4 py-2 text-sm font-bold text-white hover:bg-orange-600 shadow-md"
                             >
                                 GO TO DASHBOARD
                             </Link>
                         </div>
                     ) : (
-                        <Link href="/login" className="text-sm font-bold text-white hover:text-orange-400">
+                        <Link href="/login" className="text-sm font-bold text-slate-600 hover:text-orange-500 transition-colors">
                             LOG IN
                         </Link>
                     )}
@@ -48,24 +48,28 @@ export default async function HomePage() {
 
                 {/* Text Esquerra */}
                 <div className="flex flex-col items-start gap-6 py-12 pr-8 lg:py-0">
-                    <h1 className="text-5xl font-extrabold uppercase leading-tight tracking-tight text-slate-600 sm:text-6xl md:text-[5rem]">
-                        Sports <span className="text-slate-400">Coaching</span>
+                    <h1 className="text-5xl font-extrabold uppercase leading-tight tracking-tight text-slate-700 sm:text-6xl md:text-[5rem]">
+                        Tactical <span className="text-orange-500">Planning</span>
                         <br />
-                        <span className="font-serif italic font-light text-slate-400">Made Easy</span>
+                        <span className="font-serif italic font-light text-slate-400">Reimagined</span>
                     </h1>
+
+                    <p className="max-w-lg text-lg text-slate-500 font-medium">
+                        Go beyond static physical whiteboards. An intuitive digital tool for planning, animating, and analyzing plays for Hockey, Futsal, Handball, and more.
+                    </p>
 
                     <div className="space-y-3 text-lg text-slate-500">
                         <div className="flex items-center gap-3">
                             <span className="h-4 w-2 -skew-x-12 bg-orange-400"></span>
-                            <p>Search 1000&apos;s of ideas</p>
+                            <p>Interactive & Animated Boards</p>
                         </div>
                         <div className="flex items-center gap-3">
                             <span className="h-4 w-2 -skew-x-12 bg-orange-400"></span>
-                            <p>Build and share training plans</p>
+                            <p>Organize Training Sessions</p>
                         </div>
                         <div className="flex items-center gap-3">
                             <span className="h-4 w-2 -skew-x-12 bg-orange-400"></span>
-                            <p>Get expert advice and more...</p>
+                            <p>Build your Digital Playbook</p>
                         </div>
                     </div>
 

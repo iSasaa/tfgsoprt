@@ -66,6 +66,7 @@ model User {
     boards        Board[]
     folders       Folder[]
     password      String?
+    clubs         Club[]
 }
 
 model Board {
@@ -105,4 +106,44 @@ model VerificationToken {
     expires    DateTime
 
     @@unique([identifier, token])
+}
+// Core Application Data
+
+model Club {
+    id        String   @id @default(cuid())
+    name      String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    
+    userId    String
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    
+    sports    Sport[]
+
+    @@index([userId])
+}
+
+model Sport {
+    id        String   @id @default(cuid())
+    name      String
+    
+    clubId    String
+    club      Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+    
+    teams     Team[]
+    
+    // Configurable visibility per user/context could be added here later, 
+    // but for now, implicit ownership via Club->User is sufficient.
+
+    @@index([clubId])
+}
+
+model Team {
+    id        String   @id @default(cuid())
+    name      String
+    
+    sportId   String
+    sport     Sport    @relation(fields: [sportId], references: [id], onDelete: Cascade)
+
+    @@index([sportId])
 }
