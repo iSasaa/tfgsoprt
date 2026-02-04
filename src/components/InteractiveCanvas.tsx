@@ -1,4 +1,4 @@
-// src/app/_components/InteractiveCanvas.tsx
+
 
 "use client";
 
@@ -7,7 +7,7 @@ import { Stage, Layer, Image, Rect, Circle, Line } from "react-konva";
 import useImage from "use-image";
 import Konva from "konva";
 
-// --- Definim els tipus per a més seguretat amb TypeScript ---
+
 type Frame = { x: number; y: number; time: number };
 type Recordings = { [shapeId: string]: Frame[] };
 type ShapeCommonProps = {
@@ -27,7 +27,7 @@ type CircleProps = ShapeCommonProps & { radius: number };
 type Shape = RectangleProps | CircleProps;
 
 
-// --- Component per a la imatge de fons ---
+
 const BackgroundImage = () => {
   const [image] = useImage("/img/camp_hoquei.png");
   if (!image) return null;
@@ -35,54 +35,51 @@ const BackgroundImage = () => {
 };
 
 
-// --- Component principal del nostre llenç interactiu ---
+
 export const InteractiveCanvas = () => {
   const [shapes, setShapes] = useState<Shape[]>([]);
-  
-  // --- ESTATS ---
+
+
   const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
   const [recordings, setRecordings] = useState<Recordings>({});
   const [showPath, setShowPath] = useState(false);
   const [showTrail, setShowTrail] = useState(false);
-  // NOU: Estat per guardar els punts de les línies de l'estela
   const [trailLines, setTrailLines] = useState<Record<string, number[]>>({});
 
-  // --- REFS PER ACCEDIR A L'ESTAT ACTUALITZAT DES DELS ESDEVENIMENTS ---
+
   const recordingsRef = useRef(recordings);
   const isRecordingRef = useRef(isRecording);
   const selectedShapeIdRef = useRef(selectedShapeId);
   const showTrailRef = useRef(showTrail);
 
-  // Mantenim els refs sempre sincronitzats amb l'últim estat
   useEffect(() => {
     recordingsRef.current = recordings;
     isRecordingRef.current = isRecording;
     selectedShapeIdRef.current = selectedShapeId;
     showTrailRef.current = showTrail;
   });
-  
-  // Referències per a Konva i temporitzadors
+
+
   const recordStartTimeRef = useRef<number>(0);
   const animationRef = useRef<Konva.Animation | null>(null);
   const layerRef = useRef<Konva.Layer>(null);
   const loopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const trailLayerRef = useRef<Konva.Layer>(null);
-  // NOU: Ref per controlar la freqüència d'actualització de l'estela (optimització)
   const lastTrailUpdateTimeRef = useRef<Record<string, number>>({});
 
 
-  // --- LÒGICA DE LA GRAVACIÓ ---
+
   const handleRecordToggle = () => {
     if (!selectedShapeId) {
       alert("Si us plau, selecciona una forma fent-hi clic abans de gravar.");
       return;
     }
-    
+
     if (!isRecording) {
       setIsRecording(true);
-      setIsPlaying(true); 
+      setIsPlaying(true);
       recordStartTimeRef.current = Date.now();
       setRecordings(prev => ({ ...prev, [selectedShapeId]: [] }));
     } else {
@@ -90,7 +87,7 @@ export const InteractiveCanvas = () => {
       setIsPlaying(false);
     }
   };
-  
+
   const handleDragStart = (e: Konva.KonvaEventObject<DragEvent>) => {
     if (isRecordingRef.current && e.target.id() === selectedShapeIdRef.current) {
       const frame: Frame = { x: e.target.x(), y: e.target.y(), time: 0 };
@@ -133,7 +130,7 @@ export const InteractiveCanvas = () => {
   };
 
 
-  // --- LÒGICA DE LA REPRODUCCIÓ ---
+
   useEffect(() => {
     const layer = layerRef.current;
     if (!layer) return;
@@ -147,7 +144,7 @@ export const InteractiveCanvas = () => {
           if (shapeId === selectedShapeIdRef.current && isRecordingRef.current) return;
           const shapeNode = layer.findOne<Konva.Shape>(`#${shapeId}`);
           if (!shapeNode || frames.length === 0) return;
-          
+
           let currentFrame = frames[0]!;
           for (const recordedFrame of frames) {
             if (recordedFrame.time <= elapsedTime) {
@@ -158,16 +155,14 @@ export const InteractiveCanvas = () => {
           }
           shapeNode.position({ x: currentFrame.x, y: currentFrame.y });
 
-          // MODIFICAT: Nova lògica per a l'estela de línia
           if (showTrailRef.current && !isRecordingRef.current) {
             const now = Date.now();
-            // Optimització: només afegim un punt a la línia cada 50ms
             if (now - (lastTrailUpdateTimeRef.current[shapeId] || 0) > 50) {
               lastTrailUpdateTimeRef.current[shapeId] = now;
               const shapeConfig = shapes.find(s => s.id === shapeId);
               if (!shapeConfig) return;
 
-              // Calculem el centre de la forma per dibuixar la línia
+
               const offsetX = 'radius' in shapeConfig ? shapeConfig.radius : shapeConfig.width / 2;
               const offsetY = 'radius' in shapeConfig ? shapeConfig.radius : shapeConfig.height / 2;
 
@@ -181,21 +176,21 @@ export const InteractiveCanvas = () => {
         });
       }, layer);
       animationRef.current.start();
-      
+
       if (!isRecordingRef.current) {
         const maxDuration = getMaxRecordingDuration();
         if (maxDuration > 0) {
           loopTimeoutRef.current = setTimeout(() => {
             setIsPlaying(false);
-            setTimeout(() => setIsPlaying(true), 50); 
+            setTimeout(() => setIsPlaying(true), 50);
           }, maxDuration + 3000);
         }
       }
 
-    } else { // Quan isPlaying és false
+    } else {
       animationRef.current?.stop();
-      setTrailLines({}); // Netegem les línies de l'estela
-      lastTrailUpdateTimeRef.current = {}; // Reiniciem el temporitzador de l'estela
+      setTrailLines({});
+      lastTrailUpdateTimeRef.current = {};
       Object.entries(recordingsRef.current).forEach(([shapeId, frames]: [string, Frame[]]) => {
         const shapeNode = layer.findOne(`#${shapeId}`);
         if (shapeNode && frames.length > 0) {
@@ -210,7 +205,6 @@ export const InteractiveCanvas = () => {
     };
   }, [isPlaying, shapes]); // Afegim `shapes` a les dependències per accedir a la seva info
 
-  // NOU: Efecte per netejar les línies si l'usuari desactiva la opció
   useEffect(() => {
     if (!showTrail) {
       setTrailLines({});
@@ -218,7 +212,7 @@ export const InteractiveCanvas = () => {
   }, [showTrail]);
 
 
-  // --- Funció per afegir formes ---
+
   const addShape = (type: 'rect' | 'circle') => {
     const shapeId = `${type}-${shapes.length}`;
     const newX = window.innerWidth - 250;
@@ -235,10 +229,10 @@ export const InteractiveCanvas = () => {
     };
     setShapes([...shapes, newShape]);
   };
-  
+
   return (
     <div>
-      {/* --- CONTROLS --- */}
+
       <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 1, background: 'rgba(0,0,0,0.5)', padding: '10px', borderRadius: '5px', color: 'white' }}>
         <div>
           <button onClick={() => addShape('rect')} style={{ marginRight: '10px' }}>+ Rectangle</button>
@@ -253,19 +247,19 @@ export const InteractiveCanvas = () => {
         </div>
 
         <div style={{ marginTop: '15px', borderTop: '1px solid white', paddingTop: '10px' }}>
-            <h4 style={{ margin: '0 0 10px 0' }}>Opcions de Visualització</h4>
-            <div>
-                <label>
-                    <input type="checkbox" checked={showPath} onChange={(e) => setShowPath(e.target.checked)} />
-                    Mostrar recorregut estàtic
-                </label>
-            </div>
-            <div style={{ marginTop: '5px' }}>
-                <label>
-                    <input type="checkbox" checked={showTrail} onChange={(e) => setShowTrail(e.target.checked)} />
-                    Mostrar estela (línia dinàmica) ✨
-                </label>
-            </div>
+          <h4 style={{ margin: '0 0 10px 0' }}>Opcions de Visualització</h4>
+          <div>
+            <label>
+              <input type="checkbox" checked={showPath} onChange={(e) => setShowPath(e.target.checked)} />
+              Mostrar recorregut estàtic
+            </label>
+          </div>
+          <div style={{ marginTop: '5px' }}>
+            <label>
+              <input type="checkbox" checked={showTrail} onChange={(e) => setShowTrail(e.target.checked)} />
+              Mostrar estela (línia dinàmica) ✨
+            </label>
+          </div>
         </div>
 
         <div style={{ marginTop: '10px', fontSize: '12px' }}>
@@ -278,7 +272,7 @@ export const InteractiveCanvas = () => {
         <Layer>
           <BackgroundImage />
         </Layer>
-        {/* MODIFICAT: La capa d'esteles ara renderitza les línies des de l'estat */}
+
         <Layer ref={trailLayerRef}>
           {Object.entries(trailLines).map(([shapeId, points]) => {
             const shape = shapes.find(s => s.id === shapeId);
@@ -300,23 +294,23 @@ export const InteractiveCanvas = () => {
         <Layer ref={layerRef}>
           <>
             {showPath && Object.entries(recordings).map(([shapeId, frames]) => {
-                if (frames.length < 2) return null;
-                const shape = shapes.find(s => s.id === shapeId);
-                if (!shape) return null;
-                
-                const points = frames.flatMap(frame => [frame.x + ('radius' in shape ? shape.radius : shape.width / 2), frame.y + ('radius' in shape ? shape.radius : shape.height / 2)]);
+              if (frames.length < 2) return null;
+              const shape = shapes.find(s => s.id === shapeId);
+              if (!shape) return null;
 
-                return (
-                    <Line
-                        key={`${shapeId}-path`}
-                        points={points}
-                        stroke={shape.fill}
-                        strokeWidth={2}
-                        tension={0.5}
-                        dash={[10, 5]}
-                        listening={false}
-                    />
-                );
+              const points = frames.flatMap(frame => [frame.x + ('radius' in shape ? shape.radius : shape.width / 2), frame.y + ('radius' in shape ? shape.radius : shape.height / 2)]);
+
+              return (
+                <Line
+                  key={`${shapeId}-path`}
+                  points={points}
+                  stroke={shape.fill}
+                  strokeWidth={2}
+                  tension={0.5}
+                  dash={[10, 5]}
+                  listening={false}
+                />
+              );
             })}
 
             {shapes.map((shape) => {

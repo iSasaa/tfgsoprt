@@ -19,7 +19,6 @@ export default function NewBoardPage() {
 
     const createBoard = api.board.create.useMutation({
         onSuccess: (board) => {
-            // Redirect to the new board
             router.push(`/whiteboard/${board.id}`);
         },
     });
@@ -60,8 +59,8 @@ export default function NewBoardPage() {
                                 type="button"
                                 onClick={() => setSelectedSport(sport.id)}
                                 className={`flex flex-col items-center justify-center p-4 rounded-xl border transition-all ${selectedSport === sport.id
-                                        ? "bg-purple-600/20 border-purple-500 text-white"
-                                        : "bg-[#0f1016] border-white/5 text-gray-400 hover:bg-white/5 hover:text-gray-200"
+                                    ? "bg-purple-600/20 border-purple-500 text-white"
+                                    : "bg-[#0f1016] border-white/5 text-gray-400 hover:bg-white/5 hover:text-gray-200"
                                     }`}
                             >
                                 <span className="text-3xl mb-2">{sport.icon}</span>

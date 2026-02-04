@@ -34,9 +34,9 @@ export default function LoginPage() {
 
     return (
         <div className="flex min-h-screen w-full bg-white text-slate-800">
-            {/* --- COLUMNA ESQUERRA (Visual / Màrqueting) --- */}
+
             <div className="relative hidden w-1/2 flex-col justify-center bg-slate-700 px-12 text-white lg:flex">
-                {/* Imatge de fons simulada amb gradient/overlay */}
+
                 <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop')] bg-cover bg-center opacity-20 mix-blend-overlay"></div>
                 <div className="absolute inset-0 bg-slate-900/40"></div>
 
@@ -49,7 +49,7 @@ export default function LoginPage() {
                         <span className="text-orange-500">Sports Planning</span>
                     </h1>
 
-                    {/* Elements flotants decoratius (Mockups) */}
+
                     <div className="mt-12 flex gap-4 opacity-90">
                         <div className="h-32 w-48 rounded-lg bg-white p-2 shadow-2xl transform rotate-[-6deg]">
                             <div className="h-full w-full bg-slate-100 rounded flex items-center justify-center text-slate-400 text-xs">
@@ -65,10 +65,10 @@ export default function LoginPage() {
                 </div>
             </div>
 
-            {/* --- COLUMNA DRETA (Formulari) --- */}
+
             <div className="flex w-full flex-col justify-center bg-white px-8 py-12 lg:w-1/2 lg:px-24">
 
-                {/* Header mòbil */}
+
                 <div className="mb-8 flex justify-end">
                     <Link href="/" className="text-sm font-bold text-slate-500 hover:text-slate-800">
                         BACK TO HOME
@@ -142,7 +142,7 @@ export default function LoginPage() {
                         </Link>
                     </div>
 
-                    {/* Separador OR */}
+
                     <div className="relative my-8">
                         <div className="absolute inset-0 flex items-center">
                             <div className="w-full border-t border-slate-200"></div>
@@ -152,7 +152,7 @@ export default function LoginPage() {
                         </div>
                     </div>
 
-                    {/* Social Logins (Visuals) */}
+
                     <div className="space-y-3">
                         <button className="flex w-full items-center justify-center gap-3 rounded bg-[#3b5998] py-2.5 text-sm font-bold text-white shadow hover:bg-[#2d4373]">
                             <span className="text-lg">f</span> Log in with Facebook

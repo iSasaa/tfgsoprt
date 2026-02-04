@@ -3,14 +3,14 @@
 import { useState, useRef, useEffect } from "react";
 import { api } from "~/trpc/react";
 
-// --- Constants ---
+
 const DEFAULT_SPORTS_LIST = ["HOCKEY", "HANDBALL", "BASKETBALL", "FUTSAL", "FOOTBALL", "VOLLEYBALL", "RUGBY"];
 
 export function DashboardHeader({ children }: { children?: React.ReactNode }) {
-    // --- Data Fetching ---
+
     const { data: clubs = [], isLoading, refetch } = api.club.getHierarchy.useQuery();
 
-    // Mutations
+
     const createClubMutation = api.club.create.useMutation({
         onSuccess: () => refetch(),
         onError: (e) => alert(`Failed to create club: ${e.message}\nMake sure your server is running and database is synced.`)
@@ -18,20 +18,18 @@ export function DashboardHeader({ children }: { children?: React.ReactNode }) {
     const addSportMutation = api.club.addSport.useMutation({ onSuccess: () => refetch() });
     const addTeamMutation = api.club.addTeam.useMutation({ onSuccess: () => refetch() });
 
-    // Local Selection State (Ids)
+
     const [selectedClubId, setSelectedClubId] = useState<string>("");
     const [selectedSportName, setSelectedSportName] = useState<string>("");
     const [selectedTeamId, setSelectedTeamId] = useState<string>("");
 
-    // UI State
+
     const [isAddingClub, setIsAddingClub] = useState(false);
     const [newClubName, setNewClubName] = useState("");
 
-    // --- Derived State & Auto-Selection Logic ---
+
     useEffect(() => {
         if (!isLoading && clubs.length > 0) {
-            // Auto-select first club if none selected or selected one disappeared
-            // AND we are not in the middle of adding a new one (unless we just finished)
             const currentClub = clubs.find(c => c.id === selectedClubId);
             if (!currentClub && !isAddingClub) {
                 const firstClub = clubs[0];
@@ -40,10 +38,10 @@ export function DashboardHeader({ children }: { children?: React.ReactNode }) {
         }
     }, [clubs, isLoading, selectedClubId, isAddingClub]);
 
-    // Derived Objects
+
     const selectedClub = clubs.find((c) => c.id === selectedClubId) || clubs[0];
 
-    // Auto-select first sport if changed
+
     useEffect(() => {
         if (selectedClub && (!selectedSportName || !selectedClub.sports.find(s => s.name === selectedSportName))) {
             if (selectedClub.sports.length > 0) {
@@ -57,7 +55,7 @@ export function DashboardHeader({ children }: { children?: React.ReactNode }) {
     const currentClubSport = selectedClub?.sports.find((s) => s.name === selectedSportName);
     const availableTeams = currentClubSport?.teams || [];
 
-    // Auto-select first team
+
     useEffect(() => {
         if (currentClubSport && (!selectedTeamId || !currentClubSport.teams.find(t => t.id === selectedTeamId))) {
             if (currentClubSport.teams.length > 0) {
@@ -70,9 +68,9 @@ export function DashboardHeader({ children }: { children?: React.ReactNode }) {
 
     const selectedTeam = availableTeams.find((t) => t.id === selectedTeamId) || { name: availableTeams.length > 0 ? "Select Team..." : "No Teams" };
 
-    // --- Actions ---
 
-    // Triggered by "Add Club" dropdown option
+
+
     const handleTriggerAddClub = (name: string) => {
         setNewClubName(name);
         setIsAddingClub(true);
@@ -109,9 +107,9 @@ export function DashboardHeader({ children }: { children?: React.ReactNode }) {
         });
     };
 
-    // --- Render ---
 
-    // Show wizard if no clubs exist OR user explicitly wants to add one
+
+
     const showOnboarding = (!isLoading && clubs.length === 0) || isAddingClub;
 
     const userClubSports = selectedClub?.sports.map(s => s.name) || [];
@@ -192,21 +190,21 @@ export function DashboardHeader({ children }: { children?: React.ReactNode }) {
     );
 }
 
-// --- ONBOARDING WIZARD COMPONENT ---
+
 
 function OnboardingWizard({ onFinish, onCancel, initialName }: {
     onFinish: (club: string, sportsData: { name: string; teams: string[] }[]) => void;
     onCancel?: () => void;
     initialName?: string;
 }) {
-    // If initialName is provided, skip Step 1
+
     const [step, setStep] = useState(initialName ? 2 : 1);
     const [clubName, setClubName] = useState(initialName || "");
     const [selectedSports, setSelectedSports] = useState<string[]>([]);
 
-    // Config state
+
     const [currentSportIndex, setCurrentSportIndex] = useState(0);
-    const [teamMap, setTeamMap] = useState<Record<string, string[]>>({}); // { "Hockey": ["U16"], "Rugby": ["Senior"] }
+    const [teamMap, setTeamMap] = useState<Record<string, string[]>>({});
     const [newTeam, setNewTeam] = useState("");
 
     const currentSportConfiguring = selectedSports[currentSportIndex];
@@ -214,7 +212,6 @@ function OnboardingWizard({ onFinish, onCancel, initialName }: {
 
     const handleNext = () => {
         if (step === 2 && selectedSports.length > 0) {
-            // Initialize map for selected sports if empty
             const initialMap: Record<string, string[]> = { ...teamMap };
             selectedSports.forEach(s => {
                 if (!initialMap[s]) initialMap[s] = [];
@@ -223,12 +220,10 @@ function OnboardingWizard({ onFinish, onCancel, initialName }: {
             setStep(3);
             setCurrentSportIndex(0);
         } else if (step === 3) {
-            // Check if we have more sports to configure
             if (currentSportIndex < selectedSports.length - 1) {
                 setCurrentSportIndex(currentSportIndex + 1);
-                setNewTeam(""); // Reset input for next sport
+                setNewTeam("");
             } else {
-                // Done with all sports
                 const finalData = selectedSports.map(sport => ({
                     name: sport,
                     teams: teamMap[sport] || []
@@ -249,8 +244,6 @@ function OnboardingWizard({ onFinish, onCancel, initialName }: {
             }
         } else if (step === 2) {
             if (initialName) {
-                // Do not allow going back to Step 1 if initialName was provided
-                // Maybe trigger Cancel if onCancel exists?
                 if (onCancel) onCancel();
             } else {
                 setStep(1);
@@ -335,8 +328,8 @@ function OnboardingWizard({ onFinish, onCancel, initialName }: {
                                         key={sport}
                                         onClick={() => toggleSport(sport)}
                                         className={`rounded-lg border-2 px-4 py-3 text-sm font-bold transition-all ${isSelected
-                                                ? "border-orange-500 bg-orange-500 text-white shadow-md transform scale-105"
-                                                : "border-slate-100 bg-white text-slate-600 hover:border-orange-300"
+                                            ? "border-orange-500 bg-orange-500 text-white shadow-md transform scale-105"
+                                            : "border-slate-100 bg-white text-slate-600 hover:border-orange-300"
                                             }`}
                                     >
                                         {sport} {isSelected && "✓"}
@@ -415,7 +408,7 @@ function OnboardingWizard({ onFinish, onCancel, initialName }: {
     );
 }
 
-// --- GENERIC DROPDOWN COMPONENTS ---
+
 
 function ConfigurableSportSelector({
     selected,

@@ -7,10 +7,10 @@ export default async function HomePage() {
 
     return (
         <main className="relative min-h-screen w-full overflow-hidden bg-white text-slate-800 selection:bg-orange-200">
-            {/* FONS DIAGONAL */}
+
             <div className="absolute top-0 right-0 h-full w-[60%] origin-top-right -skew-x-12 translate-x-32 transform bg-[#536575] md:w-[55%] lg:w-[50%]" />
 
-            {/* HEADER */}
+
             <header className="relative z-50 mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
                 <div className="flex items-center gap-2">
                     <div className="text-2xl font-bold tracking-tighter text-slate-700">
@@ -30,11 +30,24 @@ export default async function HomePage() {
                             </Link>
                         </div>
                     ) : (
-                        <Link href="/login" className="text-sm font-bold text-slate-600 hover:text-orange-500 transition-colors">
-                            LOG IN
+                        <Link
+                            href="/login"
+                            className="flex items-center gap-2 text-base font-bold text-white transition-colors hover:text-orange-200"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                            >
+                                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                                <circle cx="12" cy="7" r="4" />
+                            </svg>
+                            Log in
                         </Link>
                     )}
-                    {/* Hamburger menu decoratiu */}
+
                     <div className="cursor-pointer space-y-1 md:hidden">
                         <span className="block h-0.5 w-6 bg-slate-700 dark:bg-white"></span>
                         <span className="block h-0.5 w-6 bg-slate-700 dark:bg-white"></span>
@@ -43,10 +56,10 @@ export default async function HomePage() {
                 </div>
             </header>
 
-            {/* MAIN CONTENT */}
+
             <div className="relative z-10 mx-auto grid min-h-[calc(100vh-100px)] max-w-7xl grid-cols-1 items-center px-6 lg:grid-cols-2">
 
-                {/* Text Esquerra */}
+
                 <div className="flex flex-col items-start gap-6 py-12 pr-8 lg:py-0">
                     <h1 className="text-5xl font-extrabold uppercase leading-tight tracking-tight text-slate-700 sm:text-6xl md:text-[5rem]">
                         Tactical <span className="text-orange-500">Planning</span>
@@ -92,15 +105,15 @@ export default async function HomePage() {
                     </div>
                 </div>
 
-                {/* Imatges/Decoració Dreta */}
+
                 <div className="relative hidden h-full w-full items-center justify-center lg:flex lg:pl-10">
                     <div className="relative w-full max-w-md">
-                        {/* Cercle flotant */}
+
                         <div className="absolute -left-10 top-0 z-20 flex h-16 w-16 items-center justify-center rounded-full bg-orange-400 shadow-lg text-white text-2xl animate-bounce">
                             ★
                         </div>
 
-                        {/* Mockup Card */}
+
                         <div className="relative z-10 overflow-hidden rounded-xl bg-white shadow-2xl transition-transform hover:scale-[1.02]">
                             <div className="bg-slate-100 p-3 border-b border-slate-200 flex gap-2">
                                 <div className="h-3 w-3 rounded-full bg-red-400"></div>

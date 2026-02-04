@@ -17,7 +17,7 @@ export default async function DashboardLayout({
 
     return (
         <div className="flex h-screen flex-col bg-[#f0f2f5] font-sans text-slate-900">
-            {/* TOP NAVIGATION BAR (dark teal/slate) */}
+
             <header className="flex h-12 w-full items-center bg-[#0f2d40] shadow-md z-50">
                 <DashboardHeader>
                     <Link
@@ -27,17 +27,17 @@ export default async function DashboardLayout({
                         <span>✎</span> Create
                     </Link>
 
-                    {/* User Nav */}
+
                     <div className="flex items-center border-l border-white/20 pl-3">
                         <UserNav user={session.user} theme="dark" />
                     </div>
                 </DashboardHeader>
             </header>
 
-            {/* MAIN WORKSPACE (Flex container below header) */}
+
             <div className="flex flex-1 overflow-hidden">
 
-                {/* 1. ICON SIDEBAR (Leftmost, thin, blue/brand color) */}
+
                 <aside className="w-16 flex-col items-center bg-[#008bc5] py-4 text-white shadow-xl z-40 hidden md:flex">
                     <SidebarIcon icon="🏠" label="Home" active />
                     <SidebarIcon icon="📋" label="Drills" />
@@ -48,9 +48,9 @@ export default async function DashboardLayout({
                     </div>
                 </aside>
 
-                {/* 2. INFO SIDEBAR (White panel, "Activity" & "My Team") */}
+
                 <aside className="w-64 flex-col border-r border-slate-200 bg-white shadow-sm z-30 hidden lg:flex">
-                    {/* Tabs simulate the mockup */}
+
                     <div className="flex border-b border-slate-200 text-xs font-bold text-slate-500">
                         <div className="flex-1 cursor-pointer border-b-2 border-orange-500 py-3 text-center text-slate-800">
                             My Team
@@ -88,11 +88,11 @@ export default async function DashboardLayout({
                     </div>
                 </aside>
 
-                {/* 3. MAIN CONTENT AREA */}
+
                 <main className="flex-1 overflow-y-auto bg-slate-100 relative">
-                    {/* Background Banner Image Shim */}
+
                     <div className="absolute top-0 left-0 w-full h-48 bg-gradient-to-r from-slate-400 to-slate-300 z-0">
-                        {/* This mimics the "Hockey Home" banner background until we put a real image */}
+
                         <div className="absolute inset-0 bg-black/10"></div>
                     </div>
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { signIn } from "next-auth/react";
 import { api } from "~/trpc/react";
 
 export default function RegisterPage() {
@@ -13,16 +14,24 @@ export default function RegisterPage() {
     const [error, setError] = useState("");
 
     const registerMutation = api.user.register.useMutation({
-        onSuccess: () => {
-            router.push("/login?registered=true");
+        onSuccess: async () => {
+            const result = await signIn("credentials", {
+                email,
+                password,
+                redirect: false,
+            });
+
+            if (result?.ok) {
+                router.push("/register/success");
+            } else {
+                router.push("/login?registered=true");
+            }
         },
         onError: (e) => {
             try {
-                // Try to parse Zod error array
-                // Example: [ { "validation": "email", ... }, { "code": "too_small", ... } ]
                 const issues = JSON.parse(e.message);
                 if (Array.isArray(issues)) {
-                    // Create a friendly list of errors
+
                     const messages = issues.map((issue: any) => {
                         if (issue.validation === "email") return "Please enter a valid email address.";
                         if (issue.code === "too_small" && issue.path?.includes("password")) return "Password must be at least 6 characters.";
@@ -32,7 +41,6 @@ export default function RegisterPage() {
                     return;
                 }
             } catch {
-                // Not JSON, use raw message
             }
             setError(e.message);
         },
@@ -46,9 +54,9 @@ export default function RegisterPage() {
 
     return (
         <div className="flex min-h-screen w-full bg-white text-slate-800">
-            {/* --- COLUMNA ESQUERRA (Visual / Màrqueting) --- */}
+
             <div className="relative hidden w-1/2 flex-col justify-center bg-slate-700 px-12 text-white lg:flex">
-                {/* Imatge de fons diferent per distingir del Login */}
+
                 <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1526676037777-05a232554f77?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-20 mix-blend-overlay"></div>
                 <div className="absolute inset-0 bg-slate-900/40"></div>
 
@@ -65,9 +73,9 @@ export default function RegisterPage() {
                         Stop relying on static papers. Start using advanced digital tools for professional tactical analysis.
                     </p>
 
-                    {/* Elements flotants decoratius (Mockups) */}
+
                     <div className="mt-8 flex gap-4 opacity-90">
-                        {/* Mockup estilitzat per Register */}
+
                         <div className="h-32 w-full max-w-sm rounded-lg bg-white/10 p-4 shadow-2xl backdrop-blur-sm border border-white/10">
                             <div className="flex items-center gap-3 mb-2">
                                 <div className="h-8 w-8 rounded-full bg-orange-400 flex items-center justify-center font-bold">1</div>
@@ -82,10 +90,10 @@ export default function RegisterPage() {
                 </div>
             </div>
 
-            {/* --- COLUMNA DRETA (Formulari) --- */}
+
             <div className="flex w-full flex-col justify-center bg-white px-8 py-12 lg:w-1/2 lg:px-24">
 
-                {/* Header mòbil */}
+
                 <div className="mb-8 flex justify-end">
                     <Link href="/" className="text-sm font-bold text-slate-500 hover:text-slate-800">
                         BACK TO HOME
@@ -106,7 +114,7 @@ export default function RegisterPage() {
 
                     <form onSubmit={handleSubmit} className="mt-8 space-y-5">
 
-                        {/* Camp Nom (Nou respecte al Login) */}
+
                         <div>
                             <label className="mb-1 block text-xs font-bold uppercase text-slate-400">
                                 Full Name
@@ -176,7 +184,7 @@ export default function RegisterPage() {
                         </Link>
                     </div>
 
-                    {/* Separador OR */}
+
                     <div className="relative my-8">
                         <div className="absolute inset-0 flex items-center">
                             <div className="w-full border-t border-slate-200"></div>
@@ -186,7 +194,7 @@ export default function RegisterPage() {
                         </div>
                     </div>
 
-                    {/* Social Logins */}
+
                     <div className="grid grid-cols-2 gap-3">
                         <button className="flex w-full items-center justify-center gap-2 rounded bg-[#3b5998] py-2.5 text-sm font-bold text-white shadow hover:bg-[#2d4373]">
                             Facebook
