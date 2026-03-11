@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-40 -40 1080 580" width="100%" height="100%">
+  <!-- Background (Dark green) -->
+  <rect x="-40" y="-40" width="1080" height="580" fill="#257300" />
+  
+  <g stroke="#ffffff" stroke-width="4">
+    <!-- Outer Border -->
+    <rect x="0" y="0" width="1000" height="500" fill="none" />
+    
+    <!-- Center Line -->
+    <line x1="500" y1="0" x2="500" y2="500" />
+    
+    <!-- Center Circle -->
+    <circle cx="500" cy="250" r="100" fill="none" />
+    <circle cx="500" cy="250" r="4" fill="#ffffff" />
+    
+    <!-- Left Penalty Area (16.5m approx) -->
+    <rect x="0" y="80" width="160" height="340" fill="none" />
+    <!-- Left Goal Area (5.5m approx) -->
+    <rect x="0" y="160" width="60" height="180" fill="none" />
+    <!-- Left Penalty Arc -->
+    <path d="M 160 190 A 100 100 0 0 1 160 310" fill="none" />
+    <!-- Left Penalty Spot -->
+    <circle cx="110" cy="250" r="4" fill="#ffffff" />
+    
+    <!-- Right Penalty Area -->
+    <rect x="840" y="80" width="160" height="340" fill="none" />
+    <!-- Right Goal Area -->
+    <rect x="940" y="160" width="60" height="180" fill="none" />
+    <!-- Right Penalty Arc -->
+    <path d="M 840 190 A 100 100 0 0 0 840 310" fill="none" />
+    <!-- Right Penalty Spot -->
+    <circle cx="890" cy="250" r="4" fill="#ffffff" />
+    
+    <!-- Corner Arcs -->
+    <path d="M 0 30 A 30 30 0 0 0 30 0" fill="none" />
+    <path d="M 0 470 A 30 30 0 0 1 30 500" fill="none" />
+    <path d="M 1000 30 A 30 30 0 0 1 970 0" fill="none" />
+    <path d="M 1000 470 A 30 30 0 0 0 970 500" fill="none" />
+  </g>
+
+  <!-- Left Goal -->
+  <rect x="-20" y="210" width="20" height="80" fill="none" stroke="#ffffff" stroke-width="4" />
+  <!-- Right Goal -->
+  <rect x="1000" y="210" width="20" height="80" fill="none" stroke="#ffffff" stroke-width="4" />
+</svg>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth } from "~/server/auth";
 import { UserNav } from "~/components/user-nav";
+import { SportCarousel } from "~/components/sport-carousel";
 
 export default async function HomePage() {
     const session = await auth();
@@ -109,9 +110,6 @@ export default async function HomePage() {
                 <div className="relative hidden h-full w-full items-center justify-center lg:flex lg:pl-10">
                     <div className="relative w-full max-w-md">
 
-                        <div className="absolute -left-10 top-0 z-20 flex h-16 w-16 items-center justify-center rounded-full bg-orange-400 shadow-lg text-white text-2xl animate-bounce">
-                            ★
-                        </div>
 
 
                         <div className="relative z-10 overflow-hidden rounded-xl bg-white shadow-2xl transition-transform hover:scale-[1.02]">
@@ -120,11 +118,9 @@ export default async function HomePage() {
                                 <div className="h-3 w-3 rounded-full bg-yellow-400"></div>
                                 <div className="h-3 w-3 rounded-full bg-green-400"></div>
                             </div>
-                            <div className="p-6">
+                        <div className="p-6">
                                 <h3 className="text-xl font-bold text-slate-700 mb-2">Tactical Board</h3>
-                                <div className="aspect-video w-full rounded bg-green-50 border border-green-100 flex items-center justify-center text-green-700/50">
-                                    [ Interactive Pitch ]
-                                </div>
+                                <SportCarousel />
                             </div>
                         </div>
                     </div>

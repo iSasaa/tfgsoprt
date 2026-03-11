@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-40 -40 1080 580" width="100%" height="100%">
+  <!-- Background (Dark blue) -->
+  <rect x="-50" y="-50" width="1100" height="600" fill="#13579C" />
+  
+  <defs>
+    <!-- Court clipping to hide dashed lines outside -->
+    <clipPath id="court-bounds">
+      <rect x="0" y="0" width="1000" height="500" />
+    </clipPath>
+    <!-- Net Pattern -->
+    <pattern id="net" width="8" height="8" patternUnits="userSpaceOnUse">
+      <path d="M 0 0 L 8 8 M 8 0 L 0 8" stroke="#ffffff" stroke-width="1" stroke-opacity="0.6" />
+    </pattern>
+  </defs>
+
+  <!-- Dashed lines mapped inside the clipping path -->
+  <g clip-path="url(#court-bounds)" stroke="#ffffff" stroke-width="4" fill="none">
+    <!-- Left 9m Dashed Line -->
+    <!-- Center of goal posts at y=210 and y=290. Radius 225 -->
+    <path d="M 0 -15 A 225 225 0 0 1 225 210 L 225 290 A 225 225 0 0 1 0 515" stroke-dasharray="15,10" />
+    <!-- Right 9m Dashed Line -->
+    <path d="M 1000 -15 A 225 225 0 0 0 775 210 L 775 290 A 225 225 0 0 0 1000 515" stroke-dasharray="15,10" />
+  </g>
+
+  <g stroke="#ffffff" stroke-width="4">
+    <!-- Outer Border -->
+    <rect x="0" y="0" width="1000" height="500" fill="none" />
+    
+    <!-- Center Line -->
+    <line x1="500" y1="0" x2="500" y2="500" />
+    
+    <!-- Left 6m Line (Exact Area) -->
+    <!-- Arc from (0,60) to (150,210), Straight to (150,290), Arc to (0,440) -->
+    <path d="M 0 60 A 150 150 0 0 1 150 210 L 150 290 A 150 150 0 0 1 0 440" fill="none" />
+    
+    <!-- Left 7m Penalty Mark (1m from 6m line -> 150+25=175) -->
+    <line x1="175" y1="235" x2="175" y2="265" />
+    
+    <!-- Right 6m Line -->
+    <path d="M 1000 60 A 150 150 0 0 0 850 210 L 850 290 A 150 150 0 0 0 1000 440" fill="none" />
+    
+    <!-- Right 7m Penalty Mark -->
+    <line x1="825" y1="235" x2="825" y2="265" />
+    
+    <!-- Goalkeeper 4m marks (100 units from goal line) -->
+    <line x1="100" y1="240" x2="100" y2="260" />
+    <line x1="900" y1="240" x2="900" y2="260" />
+    
+    <!-- Substitution Area Lines -->
+    <line x1="250" y1="0" x2="250" y2="-10" stroke-width="3" />
+    <line x1="750" y1="0" x2="750" y2="-10" stroke-width="3" />
+  </g>
+
+  <!-- Left Goal (White Frame with Net) -->
+  <rect x="-24" y="210" width="24" height="80" fill="url(#net)" stroke="#ffffff" stroke-width="4" stroke-linejoin="round" />
+  
+  <!-- Right Goal (White Frame with Net) -->
+  <rect x="1000" y="210" width="24" height="80" fill="url(#net)" stroke="#ffffff" stroke-width="4" stroke-linejoin="round" />
+</svg>

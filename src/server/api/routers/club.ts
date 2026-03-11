@@ -40,10 +40,10 @@ export const clubRouter = createTRPCRouter({
             // Map the structured input to Prisma create format
             const sportsToCreate = input.sports?.map(sport => ({
                 name: sport.name,
-                teams: sport.teams.length > 0 ? {
-                    create: sport.teams.map(t => ({ name: t }))
+                teams: (sport.teams ?? []).length > 0 ? {
+                    create: (sport.teams ?? []).map((t) => ({ name: t }))
                 } : undefined
-            })) || [];
+            })) ?? [];
 
             return ctx.db.club.create({
                 data: {

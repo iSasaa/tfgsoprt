@@ -12,7 +12,8 @@ export function SportSelector() {
     // Close dropdown when clicking outside
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+            const target = event.target as Node | null;
+            if (containerRef.current && target && !containerRef.current.contains(target)) {
                 setIsOpen(false);
             }
         }
@@ -60,7 +61,8 @@ export function ClubSelector() {
     // Close dropdown when clicking outside
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+            const target = event.target as Node | null;
+            if (containerRef.current && target && !containerRef.current.contains(target)) {
                 setIsOpen(false);
             }
         }

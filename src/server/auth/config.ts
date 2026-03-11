@@ -48,7 +48,7 @@ export const authConfig = {
           where: { email: credentials.email as string },
         });
 
-        if (!user || !user.password) return null;
+        if (!user?.password) return null;
 
         const isValid = await compare(credentials.password as string, user.password);
 
@@ -65,13 +65,18 @@ export const authConfig = {
   ],
   adapter: PrismaAdapter(db),
   callbacks: {
-    session: ({ session, token }) => ({
-      ...session,
-      user: {
-        ...session.user,
-        id: token.sub!,
-      },
-    }),
+    session: ({ session, token }) => {
+      if (session.user) {
+        return {
+          ...session,
+          user: {
+            ...session.user,
+            id: token.sub!,
+          },
+        };
+      }
+      return session;
+    },
     jwt: ({ token, user }) => {
       if (user) {
         token.sub = user.id;

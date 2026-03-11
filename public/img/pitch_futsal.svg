@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-40 -40 1080 580" width="100%" height="100%">
+  <!-- Background (Dark blue) -->
+  <rect x="-50" y="-50" width="1100" height="600" fill="#13579C" />
+  
+  <!-- Net Pattern Definition -->
+  <defs>
+    <pattern id="net" width="8" height="8" patternUnits="userSpaceOnUse">
+      <path d="M 0 0 L 8 8 M 8 0 L 0 8" stroke="#ffffff" stroke-width="1" stroke-opacity="0.6" />
+    </pattern>
+  </defs>
+
+  <g stroke="#ffffff" stroke-width="4">
+    <!-- Outer Border -->
+    <rect x="0" y="0" width="1000" height="500" fill="none" />
+    
+    <!-- Center Line -->
+    <line x1="500" y1="0" x2="500" y2="500" />
+    
+    <!-- Center Circle -->
+    <circle cx="500" cy="250" r="75" fill="none" />
+    <circle cx="500" cy="250" r="4" fill="#ffffff" />
+    
+    <!-- Left Penalty Area (Futsal strictly: straight middle line + quarter circles) -->
+    <!-- Arc from (0,60) to (150,210), Straight to (150,290), Arc to (0,440) -->
+    <path d="M 0 60 A 150 150 0 0 1 150 210 L 150 290 A 150 150 0 0 1 0 440" fill="none" />
+    
+    <!-- Right Penalty Area -->
+    <path d="M 1000 60 A 150 150 0 0 0 850 210 L 850 290 A 150 150 0 0 0 1000 440" fill="none" />
+    
+    <!-- Left Penalty Spot (6m) -->
+    <circle cx="150" cy="250" r="4" fill="#ffffff" />
+    <!-- Left Double Penalty Spot (10m) -->
+    <circle cx="250" cy="250" r="4" fill="#ffffff" />
+    
+    <!-- Right Penalty Spot (6m) -->
+    <circle cx="850" cy="250" r="4" fill="#ffffff" />
+    <!-- Right Double Penalty Spot (10m) -->
+    <circle cx="750" cy="250" r="4" fill="#ffffff" />
+    
+    <!-- Corner Arcs -->
+    <path d="M 0 15 A 15 15 0 0 0 15 0" fill="none" />
+    <path d="M 0 485 A 15 15 0 0 1 15 500" fill="none" />
+    <path d="M 1000 15 A 15 15 0 0 1 985 0" fill="none" />
+    <path d="M 1000 485 A 15 15 0 0 0 985 500" fill="none" />
+    
+    <!-- Goalkeeper substitution zone marks (optional detail) -->
+    <line x1="250" y1="0" x2="250" y2="-10" stroke-width="3" />
+    <line x1="750" y1="0" x2="750" y2="-10" stroke-width="3" />
+  </g>
+
+  <!-- Left Goal (White Frame with Net) -->
+  <rect x="-24" y="210" width="24" height="80" fill="url(#net)" stroke="#ffffff" stroke-width="4" stroke-linejoin="round" />
+  
+  <!-- Right Goal (White Frame with Net) -->
+  <rect x="1000" y="210" width="24" height="80" fill="url(#net)" stroke="#ffffff" stroke-width="4" stroke-linejoin="round" />
+</svg>

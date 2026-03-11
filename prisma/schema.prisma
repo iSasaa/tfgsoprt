@@ -14,17 +14,7 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 
-model Post {
-    id        Int      @id @default(autoincrement())
-    name      String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
 
-    createdBy   User   @relation(fields: [createdById], references: [id])
-    createdById String
-
-    @@index([name])
-}
 
 // Necessary for Next auth
 model Account {
@@ -62,43 +52,33 @@ model User {
     image         String?
     accounts      Account[]
     sessions      Session[]
-    posts         Post[]
     boards        Board[]
-    folders       Folder[]
     password      String?
     clubs         Club[]
+    trainingSessions TrainingSession[]
 }
+
 
 model Board {
     id        String   @id @default(cuid())
     title     String
     sport     String   @default("hockey")
-    data      String   // Json string for Konva state
+    data      Json     // Konva state
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
     
     userId    String
     user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
     
-    folderId  String?
-    folder    Folder?  @relation(fields: [folderId], references: [id])
+    sessionId String?
+    session   TrainingSession? @relation(fields: [sessionId], references: [id])
 
     @@index([userId])
 }
 
-model Folder {
-    id        String   @id @default(cuid())
-    name      String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-    
-    userId    String
-    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-    
-    boards    Board[]
 
-    @@index([userId])
-}
+
+
 
 model VerificationToken {
     identifier String
@@ -147,3 +127,21 @@ model Team {
 
     @@index([sportId])
 }
+
+model TrainingSession {
+    id        String   @id @default(cuid())
+    title     String
+    sport     String   @default("hockey")
+    date      DateTime @default(now())
+    notes     String?  @default("")
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    userId    String
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    boards    Board[]
+
+    @@index([userId])
+}
+

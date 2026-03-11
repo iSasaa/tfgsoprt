@@ -12,11 +12,11 @@ export function DashboardHeader({ children }: { children?: React.ReactNode }) {
 
 
     const createClubMutation = api.club.create.useMutation({
-        onSuccess: () => refetch(),
+        onSuccess: () => { void refetch(); },
         onError: (e) => alert(`Failed to create club: ${e.message}\nMake sure your server is running and database is synced.`)
     });
-    const addSportMutation = api.club.addSport.useMutation({ onSuccess: () => refetch() });
-    const addTeamMutation = api.club.addTeam.useMutation({ onSuccess: () => refetch() });
+    const addSportMutation = api.club.addSport.useMutation({ onSuccess: () => { void refetch(); } });
+    const addTeamMutation = api.club.addTeam.useMutation({ onSuccess: () => { void refetch(); } });
 
 
     const [selectedClubId, setSelectedClubId] = useState<string>("");
@@ -33,19 +33,20 @@ export function DashboardHeader({ children }: { children?: React.ReactNode }) {
             const currentClub = clubs.find(c => c.id === selectedClubId);
             if (!currentClub && !isAddingClub) {
                 const firstClub = clubs[0];
-                setSelectedClubId(firstClub.id);
+                if (firstClub) setSelectedClubId(firstClub.id);
             }
         }
     }, [clubs, isLoading, selectedClubId, isAddingClub]);
 
 
-    const selectedClub = clubs.find((c) => c.id === selectedClubId) || clubs[0];
+    const selectedClub = clubs.find((c) => c.id === selectedClubId) ?? clubs[0];
 
 
     useEffect(() => {
         if (selectedClub && (!selectedSportName || !selectedClub.sports.find(s => s.name === selectedSportName))) {
             if (selectedClub.sports.length > 0) {
-                setSelectedSportName(selectedClub.sports[0].name);
+                const firstSport = selectedClub.sports[0];
+                if (firstSport) setSelectedSportName(firstSport.name);
             } else {
                 setSelectedSportName("");
             }
@@ -53,20 +54,21 @@ export function DashboardHeader({ children }: { children?: React.ReactNode }) {
     }, [selectedClub, selectedSportName]);
 
     const currentClubSport = selectedClub?.sports.find((s) => s.name === selectedSportName);
-    const availableTeams = currentClubSport?.teams || [];
+    const availableTeams = currentClubSport?.teams ?? [];
 
 
     useEffect(() => {
         if (currentClubSport && (!selectedTeamId || !currentClubSport.teams.find(t => t.id === selectedTeamId))) {
             if (currentClubSport.teams.length > 0) {
-                setSelectedTeamId(currentClubSport.teams[0].id);
+                const firstTeam = currentClubSport.teams[0];
+                if (firstTeam) setSelectedTeamId(firstTeam.id);
             } else {
                 setSelectedTeamId("");
             }
         }
     }, [currentClubSport, selectedTeamId]);
 
-    const selectedTeam = availableTeams.find((t) => t.id === selectedTeamId) || { name: availableTeams.length > 0 ? "Select Team..." : "No Teams" };
+    const selectedTeam = availableTeams.find((t) => t.id === selectedTeamId) ?? { id: "", name: availableTeams.length > 0 ? "Select Team..." : "No Teams" };
 
 
 
@@ -112,7 +114,7 @@ export function DashboardHeader({ children }: { children?: React.ReactNode }) {
 
     const showOnboarding = (!isLoading && clubs.length === 0) || isAddingClub;
 
-    const userClubSports = selectedClub?.sports.map(s => s.name) || [];
+    const userClubSports = selectedClub?.sports.map(s => s.name) ?? [];
     const allAvailableSports = Array.from(new Set([...DEFAULT_SPORTS_LIST, ...userClubSports]));
 
     if (isLoading) return <div className="h-16 flex items-center px-4 text-white/50 animate-pulse">Loading settings...</div>;
@@ -172,7 +174,7 @@ export function DashboardHeader({ children }: { children?: React.ReactNode }) {
                 {clubs.length > 0 && (
                     <div className="mr-4 text-sm font-semibold text-slate-300">
                         <InputDropdown
-                            label={selectedClub?.name || "Select Club"}
+                            label={selectedClub?.name ?? "Select Club"}
                             options={clubs.map(c => c.name)}
                             onSelect={(name) => {
                                 const c = clubs.find(cl => cl.name === name);
@@ -199,7 +201,7 @@ function OnboardingWizard({ onFinish, onCancel, initialName }: {
 }) {
 
     const [step, setStep] = useState(initialName ? 2 : 1);
-    const [clubName, setClubName] = useState(initialName || "");
+    const [clubName, setClubName] = useState(initialName ?? "");
     const [selectedSports, setSelectedSports] = useState<string[]>([]);
 
 
@@ -208,13 +210,13 @@ function OnboardingWizard({ onFinish, onCancel, initialName }: {
     const [newTeam, setNewTeam] = useState("");
 
     const currentSportConfiguring = selectedSports[currentSportIndex];
-    const currentTeams = currentSportConfiguring ? (teamMap[currentSportConfiguring] || []) : [];
+    const currentTeams = currentSportConfiguring ? (teamMap[currentSportConfiguring] ?? []) : [];
 
     const handleNext = () => {
         if (step === 2 && selectedSports.length > 0) {
             const initialMap: Record<string, string[]> = { ...teamMap };
             selectedSports.forEach(s => {
-                if (!initialMap[s]) initialMap[s] = [];
+                initialMap[s] ??= [];
             });
             setTeamMap(initialMap);
             setStep(3);
@@ -226,7 +228,7 @@ function OnboardingWizard({ onFinish, onCancel, initialName }: {
             } else {
                 const finalData = selectedSports.map(sport => ({
                     name: sport,
-                    teams: teamMap[sport] || []
+                    teams: teamMap[sport] ?? []
                 }));
                 onFinish(clubName, finalData);
             }
@@ -570,10 +572,11 @@ function InputDropdown({ label, options, onSelect, onAdd, placeholder, emptyLabe
     );
 }
 
-function useClickOutside(ref: React.RefObject<HTMLElement>, handler: () => void) {
+function useClickOutside(ref: React.RefObject<HTMLElement | null>, handler: () => void) {
     useEffect(() => {
         const listener = (event: MouseEvent | TouchEvent) => {
-            if (!ref.current || ref.current.contains(event.target as Node)) return;
+            const target = event.target as Node | null;
+            if (!ref.current || !target || ref.current.contains(target)) return;
             handler();
         };
         document.addEventListener("mousedown", listener);

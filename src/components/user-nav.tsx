@@ -4,7 +4,13 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 
-export function UserNav({ user, theme = "dark" }: { user: any; theme?: "dark" | "light" }) {
+interface NavUser {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+}
+
+export function UserNav({ user, theme = "dark" }: { user: NavUser; theme?: "dark" | "light" }) {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -21,7 +27,7 @@ export function UserNav({ user, theme = "dark" }: { user: any; theme?: "dark" | 
 
 
     const initials = user?.name
-        ? user.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2)
+        ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2)
         : "U";
 
     const isDark = theme === "dark";
@@ -42,7 +48,7 @@ export function UserNav({ user, theme = "dark" }: { user: any; theme?: "dark" | 
 
 
                 <div className="hidden text-sm font-medium md:block">
-                    {user?.name || "User"}
+                    {user?.name ?? "User"}
                 </div>
                 <svg
                     xmlns="http://www.w3.org/2000/svg"

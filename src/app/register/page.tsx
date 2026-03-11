@@ -6,6 +6,13 @@ import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { api } from "~/trpc/react";
 
+interface ZodIssue {
+    validation?: string;
+    code?: string;
+    path?: string[];
+    message?: string;
+}
+
 export default function RegisterPage() {
     const router = useRouter();
     const [name, setName] = useState("");
@@ -14,28 +21,30 @@ export default function RegisterPage() {
     const [error, setError] = useState("");
 
     const registerMutation = api.user.register.useMutation({
-        onSuccess: async () => {
-            const result = await signIn("credentials", {
-                email,
-                password,
-                redirect: false,
-            });
+        onSuccess: () => {
+            void (async () => {
+                const result = await signIn("credentials", {
+                    email,
+                    password,
+                    redirect: false,
+                });
 
-            if (result?.ok) {
-                router.push("/register/success");
-            } else {
-                router.push("/login?registered=true");
-            }
+                if (result?.ok) {
+                    router.push("/register/success");
+                } else {
+                    router.push("/login?registered=true");
+                }
+            })();
         },
         onError: (e) => {
             try {
-                const issues = JSON.parse(e.message);
+                const issues = JSON.parse(e.message) as unknown;
                 if (Array.isArray(issues)) {
 
-                    const messages = issues.map((issue: any) => {
+                    const messages = (issues as ZodIssue[]).map((issue) => {
                         if (issue.validation === "email") return "Please enter a valid email address.";
                         if (issue.code === "too_small" && issue.path?.includes("password")) return "Password must be at least 6 characters.";
-                        return issue.message || "Invalid input.";
+                        return issue.message ?? "Invalid input.";
                     });
                     setError(messages.join(" "));
                     return;

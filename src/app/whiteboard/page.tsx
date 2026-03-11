@@ -1,11 +1,17 @@
-// src/app/page.tsx
+import { auth } from "~/server/auth";
+import { redirect } from "next/navigation";
+import { api } from "~/trpc/server";
 
-import { CanvasLoader } from "~/app/_components/CanvasLoader";
+export default async function WhiteboardIndexPage() {
+  const session = await auth();
+  if (!session) {
+    redirect("/api/auth/signin");
+  }
 
-export default function HomePage() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c] text-white">
-      <CanvasLoader />
-    </main>
-  );
+  const board = await api.board.create({
+    title: "Quick Board",
+    sport: "Hockey",
+  });
+
+  redirect(`/whiteboard/${board.id}`);
 }

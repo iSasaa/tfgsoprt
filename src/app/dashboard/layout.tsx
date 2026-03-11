@@ -27,7 +27,6 @@ export default async function DashboardLayout({
                         <span>✎</span> Create
                     </Link>
 
-
                     <div className="flex items-center border-l border-white/20 pl-3">
                         <UserNav user={session.user} theme="dark" />
                     </div>
@@ -37,18 +36,19 @@ export default async function DashboardLayout({
 
             <div className="flex flex-1 overflow-hidden">
 
-
+                {/* Icon sidebar */}
                 <aside className="w-16 flex-col items-center bg-[#008bc5] py-4 text-white shadow-xl z-40 hidden md:flex">
-                    <SidebarIcon icon="🏠" label="Home" active />
-                    <SidebarIcon icon="📋" label="Drills" />
-                    <SidebarIcon icon="📅" label="Plans" />
-                    <SidebarIcon icon="👥" label="Team" />
+                    <SidebarLink href="/dashboard" icon="🏠" label="Home" />
+                    <SidebarLink href="/dashboard/boards" icon="📋" label="Drills" />
+                    <SidebarLink href="/dashboard/plans" icon="📅" label="Plans" />
+                    <SidebarLink href="/dashboard" icon="👥" label="Team" />
                     <div className="mt-auto mb-4">
-                        <SidebarIcon icon="⚙️" label="Settings" />
+                        <SidebarLink href="/dashboard" icon="⚙️" label="Settings" />
                     </div>
                 </aside>
 
 
+                {/* Right panel */}
                 <aside className="w-64 flex-col border-r border-slate-200 bg-white shadow-sm z-30 hidden lg:flex">
 
                     <div className="flex border-b border-slate-200 text-xs font-bold text-slate-500">
@@ -92,7 +92,6 @@ export default async function DashboardLayout({
                 <main className="flex-1 overflow-y-auto bg-slate-100 relative">
 
                     <div className="absolute top-0 left-0 w-full h-48 bg-gradient-to-r from-slate-400 to-slate-300 z-0">
-
                         <div className="absolute inset-0 bg-black/10"></div>
                     </div>
 
@@ -105,11 +104,14 @@ export default async function DashboardLayout({
     );
 }
 
-function SidebarIcon({ icon, label, active }: { icon: string; label: string; active?: boolean }) {
+function SidebarLink({ href, icon, label, active }: { href: string; icon: string; label: string; active?: boolean }) {
     return (
-        <div className={`flex cursor-pointer flex-col items-center justify-center py-3 w-full transition-colors ${active ? 'bg-[#0077a8]' : 'hover:bg-[#0077a8]'}`}>
+        <Link
+            href={href}
+            className={`flex cursor-pointer flex-col items-center justify-center py-3 w-full transition-colors ${active ? "bg-[#0077a8]" : "hover:bg-[#0077a8]"}`}
+        >
             <span className="text-xl mb-1">{icon}</span>
             <span className="text-[10px] uppercase font-bold tracking-wide opacity-90">{label}</span>
-        </div>
+        </Link>
     );
 }
