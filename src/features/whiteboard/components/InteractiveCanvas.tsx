@@ -108,9 +108,11 @@ export const InteractiveCanvas = ({ boardId, initialData, sport }: InteractiveCa
     currentStep, setCurrentStep, freeSteps, setFreeSteps,
     currentFreeStep, setCurrentFreeStep, isRecording, setIsRecording,
     isPlaying, setIsPlaying, selectedShapeId, setSelectedShapeId,
-    handleSaveBoard, saveMutation, addElement, deleteSelected, rotateSelected
+    handleSaveBoard, saveMutation, addElement, deleteSelected, rotateSelected,
+    goToStep, addNextStep, removeLastStep, enterStepMode, saveCurrentStep,
+    notification
   } = useBoardState({
-    boardId, initialData, sport, stageSize, elementColors, voronoiLayerRef, mode
+    boardId, initialData, sport, stageSize, elementColors, voronoiLayerRef, mode, setMode
   });
 
   const {
@@ -552,7 +554,7 @@ export const InteractiveCanvas = ({ boardId, initialData, sport }: InteractiveCa
 
   // Recording toggle is no longer needed physically, but keep logic if invoked elsewhere
   const handleRecordToggle = () => {
-    alert("L'enregistrament és automàtic al moure la fitxa (després del pas 1)");
+    alert("Recording is automatic when moving player (after step 1)");
   };
 
   const getMaxDuration = () => {
@@ -696,158 +698,7 @@ export const InteractiveCanvas = ({ boardId, initialData, sport }: InteractiveCa
     }
   }, [showVoronoi, stageSize]); // reads shapesRef.current live, no shapes dep needed
 
-  // ─── Step mode ──────────────────────────────────────────────────────────────
-
-  // Enter step mode: auto-capture step 0 from current shapes
-  const enterStepMode = useCallback(() => {
-    setMode("step");
-    setSteps(prev => {
-      if (prev.length === 0) {
-        const snap: StepSnapshot = shapesRef.current.map(s => ({ id: s.id, x: s.x, y: s.y, rotation: s.rotation, ballOwner: s.ballOwner }));
-        setCurrentStep(0);
-        return [snap];
-      }
-      return prev;
-    });
-  }, []);
-
-  const saveCurrentStep = useCallback(() => {
-    setSteps(prev => {
-      const updated = [...prev];
-      const oldSnap = updated[currentStep];
-      const snap: StepSnapshot = shapesRef.current.map(s => {
-        const oldS = oldSnap?.find(ss => ss.id === s.id);
-        return { id: s.id, x: s.x, y: s.y, rotation: s.rotation, wp1: oldS?.wp1, wp2: oldS?.wp2, ballOwner: s.ballOwner };
-      });
-      updated[currentStep] = snap;
-      return updated;
-    });
-  }, [currentStep]);
-
-  // Add a new step after current (snapshot current state first, then append duplicate as next)
-  const addNextStep = useCallback(() => {
-    // First save current step preserving waypoints
-    setSteps(prev => {
-      const updated = [...prev];
-      const oldSnap = updated[currentStep];
-      const snapCurrent: StepSnapshot = shapesRef.current.map(s => {
-        const oldS = oldSnap?.find(ss => ss.id === s.id);
-        return { id: s.id, x: s.x, y: s.y, rotation: s.rotation, wp1: oldS?.wp1, wp2: oldS?.wp2, ballOwner: s.ballOwner };
-      });
-      updated[currentStep] = snapCurrent;
-
-      // Insert new step after current (copy of current so user just moves things from there)
-      const newSnap: StepSnapshot = shapesRef.current.map(s => ({ id: s.id, x: s.x, y: s.y, rotation: s.rotation, ballOwner: s.ballOwner }));
-      updated.splice(currentStep + 1, 0, newSnap);
-      return updated;
-    });
-    setCurrentStep(prev => prev + 1);
-  }, [currentStep]);
-
-  const goToStep = useCallback((idx: number) => {
-    const allSteps = stepsRef.current;
-    const snapshot = allSteps[idx];
-    if (!snapshot) return;
-
-    // Cancel any ongoing step transition animation
-    if (stepTransitionAnimRef.current !== null) {
-      cancelAnimationFrame(stepTransitionAnimRef.current);
-      stepTransitionAnimRef.current = null;
-    }
-
-    // save current step before leaving preserving waypoints
-    setSteps(prev => {
-      const updated = [...prev];
-      const oldSnap = updated[currentStep];
-      const snapCurrent: StepSnapshot = shapesRef.current.map(s => {
-        const oldS = oldSnap?.find(ss => ss.id === s.id);
-        return { id: s.id, x: s.x, y: s.y, rotation: s.rotation, wp1: oldS?.wp1, wp2: oldS?.wp2, ballOwner: s.ballOwner };
-      });
-      updated[currentStep] = snapCurrent;
-      return updated;
-    });
-    setCurrentStep(idx);
-
-    // Animate players to target positions instead of teleporting
-    const fromPositions = shapesRef.current.map(s => ({ id: s.id, x: s.x, y: s.y, rotation: s.rotation, ballOwner: s.ballOwner }));
-    const duration = 300; // ms
-    const startTime = performance.now();
-
-    const animateTick = (now: number) => {
-      const elapsed = now - startTime;
-      const t = Math.min(elapsed / duration, 1);
-      // Ease-out cubic
-      const easedT = 1 - Math.pow(1 - t, 3);
-
-      setShapes(prev => {
-        let next = prev.map(s => {
-          const from = fromPositions.find(f => f.id === s.id);
-          const to = snapshot.find(ss => ss.id === s.id);
-          if (!from || !to) return s;
-          return {
-            ...s,
-            x: from.x + (to.x - from.x) * easedT,
-            y: from.y + (to.y - from.y) * easedT,
-            rotation: (from.rotation ?? 0) + ((to.rotation ?? 0) - (from.rotation ?? 0)) * easedT,
-            ballOwner: t === 1 ? to.ballOwner : (from.ballOwner === to.ballOwner ? from.ballOwner : null)
-          };
-        });
-
-        // Snap bound balls to their owner's interpolated position
-        next = next.map(s => {
-          if (s.type === 'ball' && s.ballOwner) {
-            const owner = next.find(o => o.id === s.ballOwner);
-            if (owner) return { ...s, x: owner.x + 12, y: owner.y + 12 };
-          }
-          return s;
-        });
-
-        return next;
-      });
-
-      if (t < 1) {
-        stepTransitionAnimRef.current = requestAnimationFrame(animateTick);
-      } else {
-        stepTransitionAnimRef.current = null;
-      }
-    };
-    stepTransitionAnimRef.current = requestAnimationFrame(animateTick);
-  }, [currentStep]);
-
-  const deleteStep = useCallback(() => {
-    if (steps.length <= 1) return;
-    const newSteps = steps.filter((_, i) => i !== currentStep);
-    setSteps(newSteps);
-    const newIdx = Math.max(0, currentStep - 1);
-    setCurrentStep(newIdx);
-    const snapshot = newSteps[newIdx];
-    if (snapshot) {
-      setShapes(prev => prev.map(s => {
-        const snap = snapshot.find(ss => ss.id === s.id);
-        return snap ? { ...s, x: snap.x, y: snap.y, rotation: snap.rotation, ballOwner: snap.ballOwner } : s;
-      }));
-    }
-  }, [steps, currentStep]);
-  
-  const detenerStepPlay = useCallback(() => {
-    pauseStepPlay();
-    goToStep(0);
-  }, [pauseStepPlay, goToStep]);
-
-  // ─── Step playback ──────────────────────────────────────────────────────────
-
-
-  // ─── Elements ───────────────────────────────────────────────────────────────
-  const getNextLabel = (type: ElementType) => {
-    if (type !== "player-home" && type !== "player-away") return undefined;
-    const existingNums = shapes
-      .filter(s => s.type === type && s.label && !isNaN(Number(s.label)))
-      .map(s => Number(s.label));
-    const maxNum = existingNums.length > 0 ? Math.max(...existingNums) : 0;
-    return String(maxNum + 1);
-  };
-
-  // addElement, deleteSelected, rotateSelected, and stage pointer handlers are now provided by useBoardState and useDrawingTools hooks
+  // renderShape, sharedGroupProps etc handle UI logic
 
   // Render shape
   const renderShape = (shape: ShapeData) => {
@@ -1152,6 +1003,11 @@ export const InteractiveCanvas = ({ boardId, initialData, sport }: InteractiveCa
     setTrailLines({});
   }, [shapes, stopStepPlay]);
 
+  const detenerStepPlay = useCallback(() => {
+    stopStepPlay();
+    goToStep(0);
+  }, [stopStepPlay, goToStep]);
+
   // ─── JSX ────────────────────────────────────────────────────────────────────
   return (
     <>
@@ -1341,29 +1197,29 @@ export const InteractiveCanvas = ({ boardId, initialData, sport }: InteractiveCa
                 )}
 
                 {mode === "step" && (
-                  <>
+                   <>
                     <HeaderCtrlBtn active={isStepPlaying} danger={false} onClick={startStepPlay}
                       disabled={isStepPlaying || steps.length < 2}
-                      title={"Reproducir steps"}>
+                      title={"Play steps"}>
                       {/* Play */}
                       <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5"><path d="M3 2.5l10 5.5-10 5.5V2.5z" /></svg>
                     </HeaderCtrlBtn>
                     <HeaderCtrlBtn active={false} danger={false} onClick={pauseStepPlay}
                       disabled={!isStepPlaying}
-                      title={"Pausa"}>
+                      title={"Pause"}>
                       {/* Pause */}
                       <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5"><rect x="3" y="2" width="3.5" height="12" rx="1" /><rect x="9.5" y="2" width="3.5" height="12" rx="1" /></svg>
                     </HeaderCtrlBtn>
                     <HeaderCtrlBtn active={false} danger={false} onClick={detenerStepPlay}
-                      title={"Detener"}>
+                      title={"Stop"}>
                       {/* Stop */}
                       <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5"><rect x="3" y="3" width="10" height="10" rx="1.5" /></svg>
                     </HeaderCtrlBtn>
-                    <HeaderCtrlBtn active={isLooping} onClick={() => setIsLooping(l => !l)} title="Reproducir en bucle">
+                    <HeaderCtrlBtn active={isLooping} onClick={() => setIsLooping(l => !l)} title="Loop playback">
                       {/* Loop */}
                       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-3.5 w-3.5"><path d="M2 8a6 6 0 016-6 6 6 0 015.5 3.5M14 8a6 6 0 01-6 6 6 6 0 01-5.5-3.5" strokeLinecap="round" /><path d="M12 5.5l1.5-3 1.5 3" fill="currentColor" stroke="none" /><path d="M2.5 10.5 1 13.5l-1-3" fill="currentColor" stroke="none" /></svg>
                     </HeaderCtrlBtn>
-                    <div className="flex items-center gap-1.5 ml-2 mr-1" title="Velocidad de reproducción">
+                    <div className="flex items-center gap-1.5 ml-2 mr-1" title="Playback speed">
                       {/* Single triangle = slow */}
                       <svg viewBox="0 0 10 12" fill="currentColor" className="h-2.5 w-2.5 opacity-60"><path d="M1 1l8 5-8 5V1z" /></svg>
                       <input
@@ -1376,19 +1232,19 @@ export const InteractiveCanvas = ({ boardId, initialData, sport }: InteractiveCa
                       <svg viewBox="0 0 18 12" fill="currentColor" className="h-2.5 w-3 opacity-60"><path d="M0 0l5 6-5 6V0z" /><path d="M6 0l5 6-5 6V0z" /><path d="M12 0l5 6-5 6V0z" /></svg>
                     </div>
                     <div className="mx-1 h-4 w-px bg-white/10" />
-                    <HeaderCtrlBtn active={showTrail} onClick={() => setShowTrail(t => !t)} title="Mostrar estela">
+                    <HeaderCtrlBtn active={showTrail} onClick={() => setShowTrail(t => !t)} title="Show trail">
                       {/* Trail/sparkle */}
                       <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5"><circle cx="8" cy="8" r="2.5" /><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.2 3.2l1.4 1.4M11.4 11.4l1.4 1.4M3.2 12.8l1.4-1.4M11.4 4.6l1.4-1.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg>
                     </HeaderCtrlBtn>
                     <div className="mx-1 h-4 w-px bg-white/10" />
-                    <HeaderCtrlBtn active={autoAdvance} onClick={() => setAutoAdvance(a => !a)} title="Avance automático entre steps">
+                    <HeaderCtrlBtn active={autoAdvance} onClick={() => setAutoAdvance(a => !a)} title="Auto-advance between steps">
                       {/* Skip forward */}
                       <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5"><path d="M2 3l7 5-7 5V3zM13 3h-1.5v10H13V3z" /></svg>
                     </HeaderCtrlBtn>
                   </>
                 )}
                 <div className="mx-1 h-4 w-px bg-white/10" />
-                <HeaderCtrlBtn active={showVoronoi} onClick={() => setShowVoronoi(v => !v)} title="Diagrama de Voronoi">
+                <HeaderCtrlBtn active={showVoronoi} onClick={() => setShowVoronoi(v => !v)} title="Voronoi diagram">
                   {/* Hexagon/voronoi */}
                   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-3.5 w-3.5"><polygon points="8,2 14,5.5 14,10.5 8,14 2,10.5 2,5.5" /></svg>
                 </HeaderCtrlBtn>
@@ -1442,24 +1298,24 @@ export const InteractiveCanvas = ({ boardId, initialData, sport }: InteractiveCa
             <div className="mt-8 flex flex-col gap-2">
 
               {/* Select / Cursor Arrow */}
-              <SidebarBtn active={activeTool === "select"} onClick={() => { setActiveTool("select"); setShowShapesPanel(false); }} title="Seleccionar">
+              <SidebarBtn active={activeTool === "select"} onClick={() => { setActiveTool("select"); setShowShapesPanel(false); }} title="Select">
                 <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4"><path d="M4 2l12 7.5L11 11l-2.5 6L4 2z" /></svg>
               </SidebarBtn>
 
               {/* Pen */}
-              <SidebarBtn active={activeTool === "pen"} onClick={() => { setActiveTool("pen"); setShowShapesPanel(false); }} title="Dibujar">
+              <SidebarBtn active={activeTool === "pen"} onClick={() => { setActiveTool("pen"); setShowShapesPanel(false); }} title="Draw">
                 <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-2.207 2.207L3 13.172V16h2.828l8.38-8.379-2.83-2.828z" /></svg>
               </SidebarBtn>
 
               {/* Eraser */}
-              <SidebarBtn active={activeTool === "eraser"} onClick={() => { setActiveTool("eraser"); setShowShapesPanel(false); }} title="Borrar">
+              <SidebarBtn active={activeTool === "eraser"} onClick={() => { setActiveTool("eraser"); setShowShapesPanel(false); }} title="Erase">
                 <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4"><path d="M14.121 3.879A3 3 0 0016 6v.172a3 3 0 01-.879 2.122L9 14.414 5.586 11 12 4.586l2.121-2.121.707.707zM3.7 13.3l-1 1a1 1 0 000 1.414l1.586 1.586a1 1 0 001.414 0l1-1L3.7 13.3zM3 2h14v1H3z" opacity="0" /><path d="M17 4.5a2.5 2.5 0 00-4.243-1.768l-7.5 7.5a1 1 0 000 1.414l3.6 3.6a1 1 0 001.414 0l7.5-7.5A2.5 2.5 0 0017 6.5V4.5zM3 15.5h5M2 17h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" /></svg>
               </SidebarBtn>
 
               <SidebarDivider />
 
               {/* Clear All */}
-              <SidebarBtn active={false} onClick={() => { setDrawLines([]); }} title="Borrar todo">
+              <SidebarBtn active={false} onClick={() => { setDrawLines([]); }} title="Clear all">
                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-4 w-4" strokeLinecap="round"><path d="M4 7h12M5 7l1 9a1 1 0 001 1h6a1 1 0 001-1l1-9M8 7V4a1 1 0 011-1h2a1 1 0 011 1v3" /></svg>
               </SidebarBtn>
 
@@ -1470,7 +1326,7 @@ export const InteractiveCanvas = ({ boardId, initialData, sport }: InteractiveCa
                 <SidebarBtn
                   active={showShapesPanel || ["line", "arrow", "rect", "circle"].includes(activeTool)}
                   onClick={() => setShowShapesPanel(p => !p)}
-                  title="Formas">
+                  title="Shapes">
                   {activeTool === "line" ? (
                     <svg viewBox="0 0 20 20" stroke="currentColor" strokeWidth="2" className="h-4 w-4" strokeLinecap="round"><line x1="3" y1="17" x2="17" y2="3" /></svg>
                   ) : activeTool === "arrow" ? (
@@ -1563,6 +1419,13 @@ export const InteractiveCanvas = ({ boardId, initialData, sport }: InteractiveCa
                   ? `url("data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${eraserSize * 10}" height="${eraserSize * 10}" viewBox="0 0 ${eraserSize * 10} ${eraserSize * 10}"><circle cx="${eraserSize * 5}" cy="${eraserSize * 5}" r="${(eraserSize * 5) - 1}" fill="transparent" stroke="black" stroke-width="1"/></svg>`)}") ${eraserSize * 5} ${eraserSize * 5}, cell`
                   : "default"
             }}>
+            
+            {/* NOTIFICACIÓ POPUP */}
+            {notification && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-full shadow-xl border border-white/20 animate-bounce">
+                {notification}
+              </div>
+            )}
 
             {/* DOM Ghost for visually overlapping the UI cleanly — positioned via native DOM ref */}
             <div ref={dragPointerRef} className="fixed pointer-events-none z-[100]" style={{ display: 'none', transform: 'translate(-50%, -50%)' }}>
