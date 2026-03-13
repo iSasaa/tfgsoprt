@@ -7,6 +7,10 @@ import useImage from "use-image";
 import Konva from "konva";
 import { api } from "~/trpc/react";
 import Link from "next/link";
+import { useAnimationEngine } from "../hooks/useAnimationEngine";
+import { useDrawingTools } from "../hooks/useDrawingTools";
+import { useBoardState, type ShapeData, type StepSnapshot, type FreeStepSnapshot, type ElementType } from "../hooks/useBoardState";
+import { type DrawLine, type ToolType } from "../hooks/useDrawingTools";
 
 // ─── Voronoi helpers (outside component for zero-cost instantiation) ───────────────────────────
 type VPt = { x: number; y: number };
@@ -30,14 +34,7 @@ function clipVCell(poly: VPt[], sx: number, sy: number, ox: number, oy: number):
 }
 
 // ─── Types ──────────────────────────────────────────────────────────────────
-type ElementType = "player-home" | "player-away" | "ball" | "cone" | "goal";
-type ToolType = "select" | "pen" | "eraser" | "line" | "arrow" | "rect" | "circle";
 type Frame = { x: number; y: number; time: number };
-type Recordings = Record<string, Frame[]>;
-type StepSnapshot = Array<{ id: string; x: number; y: number; rotation?: number; wp1?: { x: number; y: number }; wp2?: { x: number; y: number }; ballOwner?: string | null }>;
-type FreeStepSnapshot = { initial: StepSnapshot; recordings: Recordings };
-type DrawLine = { id: string; points: number[]; color: string; size: number; isEraser?: boolean; type?: string };
-type ShapeData = { id: string; type: ElementType; x: number; y: number; rotation?: number; fill: string; label?: string; ballOwner?: string | null };
 
 const ELEMENT_RADIUS: Record<ElementType, number> = {
   "player-home": 18, "player-away": 18, "ball": 9, "cone": 13, "goal": 40,
@@ -62,16 +59,25 @@ export const InteractiveCanvas = ({ boardId, initialData, sport }: InteractiveCa
   const [uiScale, setUiScale] = useState(() => typeof window !== 'undefined' ? Math.max(0.4, Math.min(1, window.innerWidth / 1100, window.innerHeight / 700)) : 1);
   const [windowSize, setWindowSize] = useState(() => typeof window !== 'undefined' ? { w: window.innerWidth, h: window.innerHeight } : { w: 1100, h: 700 });
 
-  const [shapes, setShapes] = useState<ShapeData[]>(() =>
-    initialData?.shapes ? (initialData.shapes as ShapeData[]) : []
-  );
-  const [freeSteps, setFreeSteps] = useState<FreeStepSnapshot[]>(() =>
-    initialData?.freeSteps ? (initialData.freeSteps as FreeStepSnapshot[]) : [{ initial: initialData?.shapes ?? [], recordings: {} }]
-  );
-  const [currentFreeStep, setCurrentFreeStep] = useState(0);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
+  // Consolidating all whiteboard state into custom hooks for modularity and maintainability
+  const {
+    activeTool, setActiveTool, penColor, setPenColor, penSize, setPenSize,
+    eraserSize, setEraserSize, drawLines, setDrawLines, handleStagePointerDown,
+    handleStagePointerMove, handleStagePointerUp, isDrawTool,
+    isDrawing, currentLinePoints
+  } = useDrawingTools({ initialDrawLines: initialData?.drawLines ?? [] });
+
+  const [elementColors, setElementColors] = useState<Record<ElementType, string>>({
+    "player-home": "#3b82f6", "player-away": "#ef4444",
+    ball: sport === "hockey" ? "#111111" : sport === "basketball" ? "#f97316" : "#ffffff",
+    cone: "#f97316", goal: "#ffffff",
+  });
+
+  const [mode, setMode] = useState<"freesteps" | "step">("step");
+  const [isLooping, setIsLooping] = useState(false);
+  const [autoAdvance, setAutoAdvance] = useState(true);
+  const [stepPlaySpeed, setStepPlaySpeed] = useState(2);
+  const autoAdvanceRef = useRef(autoAdvance);
   const [isDraggingShape, setIsDraggingShape] = useState(false);
   const isHoveringTrashRef = useRef(false);
   const trashZoneRef = useRef<HTMLDivElement>(null);
@@ -80,68 +86,45 @@ export const InteractiveCanvas = ({ boardId, initialData, sport }: InteractiveCa
   const [showTrail, setShowTrail] = useState(false);
   const [showVoronoi, setShowVoronoi] = useState(false);
   const [trailLines, setTrailLines] = useState<Record<string, number[]>>({});
-
-  const [mode, setMode] = useState<"freesteps" | "step">("step");
-  const [pendingModeSwitch, setPendingModeSwitch] = useState<"freesteps" | "step" | null>(null);
-  const [steps, setSteps] = useState<StepSnapshot[]>(() => {
-    if (initialData?.steps && initialData.steps.length > 0) return initialData.steps as StepSnapshot[];
-    if (initialData?.shapes && initialData.shapes.length > 0) {
-      return [((initialData.shapes as ShapeData[]).map(s => ({ id: s.id, x: s.x, y: s.y })))];
-    }
-    return [[]]; // Always guarantee at least 1 step!
-  });
-  const [currentStep, setCurrentStep] = useState(0);
-  const [activeTool, setActiveTool] = useState<ToolType>("select");
-  const [penColor, setPenColor] = useState("#000000");
-  const [penSize, setPenSize] = useState(3);
-  const [eraserSize, setEraserSize] = useState(4);
-  const [drawLines, setDrawLines] = useState<DrawLine[]>(() =>
-    initialData?.drawLines ? (initialData.drawLines as DrawLine[]) : []
-  );
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [currentLinePoints, setCurrentLinePoints] = useState<number[]>([]);
-  const [elementColors, setElementColors] = useState<Record<ElementType, string>>({
-    "player-home": "#3b82f6", "player-away": "#ef4444",
-    ball: sport === "hockey" ? "#111111" : sport === "basketball" ? "#f97316" : "#ffffff",
-    cone: "#f97316", goal: "#ffffff",
-  });
-
-  // Step playback state
-  const [isLooping, setIsLooping] = useState(false);
-  const [autoAdvance, setAutoAdvance] = useState(true);
   const [showShapesPanel, setShowShapesPanel] = useState(false);
   const [goalDragImage, setGoalDragImage] = useState<string | null>(null);
-  const goalAnchorOffsetRef = useRef({ x: 0, y: 0 }); // anchor pixel pos within the captured goal image
-  const [isStepPlaying, setIsStepPlaying] = useState(false);
-  const [stepPlaySpeed, setStepPlaySpeed] = useState(2); // seconds per transition (default turtles)
-  const stepPlayRef = useRef<number | null>(null);
-  const stepPlayStartRef = useRef<number>(0);
-  const stepPlayFromRef = useRef<StepSnapshot>([]);
-  const stepPlayToRef = useRef<StepSnapshot>([]);
-  const stepPlayStepIndexRef = useRef<number>(0);
+  const goalAnchorOffsetRef = useRef({ x: 0, y: 0 });
+  const [pendingModeSwitch, setPendingModeSwitch] = useState<"freesteps" | "step" | null>(null);
 
-  // Refs
-  const freeStepsRef = useRef(freeSteps);
-  const currentFreeStepRef = useRef(currentFreeStep);
-  const isRecordingRef = useRef(isRecording);
-  const selectedShapeIdRef = useRef(selectedShapeId);
+  const layerRef = useRef<Konva.Layer>(null);
+  const voronoiLayerRef = useRef<Konva.Layer>(null);
+  const liveRecordingLineRef = useRef<Konva.Line>(null);
   const draggingShapeIdRef = useRef<string | null>(null);
   const showTrailRef = useRef(showTrail);
   const recordStartTimeRef = useRef<number>(0);
   const activeRecordingPathsRef = useRef<Record<string, Frame[]>>({});
-  const animationRef = useRef<Konva.Animation | null>(null);
-  const layerRef = useRef<Konva.Layer>(null);
-  const voronoiLayerRef = useRef<Konva.Layer>(null);
-  const liveRecordingLineRef = useRef<Konva.Line>(null);
-  const loopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastTrailUpdateTimeRef = useRef<Record<string, number>>({});
-  const isStepPlayingRef = useRef(false);
   const lastDragUpdateRef = useRef<number>(0);
-  const autoAdvanceRef = useRef(autoAdvance);
   const stepTransitionAnimRef = useRef<number | null>(null);
-  const stepsRef = useRef(steps);
-  const shapesRef = useRef(shapes);
   const prevStageSizeRef = useRef<{ width: number; height: number } | null>(null);
+
+  const {
+    shapes, setShapes, shapesRef, steps, setSteps, stepsRef,
+    currentStep, setCurrentStep, freeSteps, setFreeSteps,
+    currentFreeStep, setCurrentFreeStep, isRecording, setIsRecording,
+    isPlaying, setIsPlaying, selectedShapeId, setSelectedShapeId,
+    handleSaveBoard, saveMutation, addElement, deleteSelected, rotateSelected
+  } = useBoardState({
+    boardId, initialData, sport, stageSize, elementColors, voronoiLayerRef, mode
+  });
+
+  const {
+    isStepPlaying, startStepPlay, stopStepPlay, pauseStepPlay,
+    toggleStepPlay, animateStepTransition
+  } = useAnimationEngine({
+    layerRef, voronoiLayerRef, stepsRef, shapesRef, setShapes,
+    setCurrentStep, stepPlaySpeed, isLooping, autoAdvanceRef
+  });
+
+  const freeStepsRef = useRef(freeSteps);
+  const currentFreeStepRef = useRef(currentFreeStep);
+  const isRecordingRef = useRef(isRecording);
+  const selectedShapeIdRef = useRef(selectedShapeId);
 
   useEffect(() => {
     freeStepsRef.current = freeSteps;
@@ -151,7 +134,6 @@ export const InteractiveCanvas = ({ boardId, initialData, sport }: InteractiveCa
     showTrailRef.current = showTrail;
     stepsRef.current = steps;
     shapesRef.current = shapes;
-    isStepPlayingRef.current = isStepPlaying;
     autoAdvanceRef.current = autoAdvance;
   });
 
@@ -272,40 +254,8 @@ export const InteractiveCanvas = ({ boardId, initialData, sport }: InteractiveCa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Save: normalize positions before persisting to DB
-  const utils = api.useUtils();
-  const saveMutation = api.board.update.useMutation({
-    onSuccess: () => { void utils.board.getById.invalidate({ id: boardId }); },
-  });
-  const handleSaveBoard = () => {
-    const w = stageSize.width;
-    const h = stageSize.height;
-    const normalizeX = (x: number, width: number) => x / width;
-    const normalizeY = (y: number, height: number) => y / height;
-    const normShape = (s: ShapeData) => ({ ...s, x: normalizeX(s.x, w), y: normalizeY(s.y, h) });
-    const normSnap = (ss: any) => ({
-      ...ss,
-      x: normalizeX(ss.x, w), y: normalizeY(ss.y, h),
-      wp1: ss.wp1 ? { x: normalizeX(ss.wp1.x, w), y: normalizeY(ss.wp1.y, h) } : undefined,
-      wp2: ss.wp2 ? { x: normalizeX(ss.wp2.x, w), y: normalizeY(ss.wp2.y, h) } : undefined,
-    });
-    const normShapes = shapes.map(normShape);
-    const normSteps = steps.map(step => step.map(normSnap));
-    const normFreeSteps = freeSteps.map(fs => ({
-      ...fs,
-      initial: fs.initial.map(normSnap),
-      recordings: Object.fromEntries(
-        Object.entries(fs.recordings).map(([id, frames]) => [
-          id, frames.map(f => ({ ...f, x: normalizeX(f.x, w), y: normalizeY(f.y, h) })),
-        ])
-      ),
-    }));
-    const normDrawLines = drawLines.map(dl => ({
-      ...dl,
-      points: dl.points.map((p, i) => i % 2 === 0 ? normalizeX(p, w) : normalizeY(p, h)),
-    }));
-    saveMutation.mutate({ id: boardId, data: { shapes: normShapes, freeSteps: normFreeSteps, drawLines: normDrawLines, steps: normSteps } });
-  };
+  const animationRef = useRef<Konva.Animation | null>(null);
+  const loopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Drag handlers
   const handleDragStart = (e: Konva.KonvaEventObject<DragEvent>) => {
@@ -878,177 +828,14 @@ export const InteractiveCanvas = ({ boardId, initialData, sport }: InteractiveCa
       }));
     }
   }, [steps, currentStep]);
-
-  // ─── Step playback ──────────────────────────────────────────────────────────
-
-  const pauseStepPlay = useCallback(() => {
-    setIsStepPlaying(false);
-    isStepPlayingRef.current = false;
-    if (stepPlayRef.current !== null) {
-      cancelAnimationFrame(stepPlayRef.current);
-      stepPlayRef.current = null;
-    }
-    // Update React shapes state to match current Konva positions!
-    const layer = layerRef.current;
-    if (layer) {
-      setShapes(prev => prev.map(s => {
-        const node = layer.findOne(`#${s.id}`);
-        return node ? { ...s, x: node.x(), y: node.y() } : s;
-      }));
-    }
-  }, []);
-
+  
   const detenerStepPlay = useCallback(() => {
     pauseStepPlay();
     goToStep(0);
   }, [pauseStepPlay, goToStep]);
 
-  const stopStepPlay = useCallback(() => {
-    // This was the old stop, we'll keep it for internal use or rename it to pause
-    pauseStepPlay();
-  }, [pauseStepPlay]);
+  // ─── Step playback ──────────────────────────────────────────────────────────
 
-  const animateStepTransition = useCallback((fromSnap: StepSnapshot, toSnap: StepSnapshot, stepIdx: number, durationMs: number) => {
-    const start = performance.now();
-    stepPlayStepIndexRef.current = stepIdx;
-
-    const tick = (now: number) => {
-      // If stopped externally, bail out
-      if (!isStepPlayingRef.current) return;
-
-      const elapsed = now - start;
-      const t = Math.min(elapsed / durationMs, 1);
-      // ease in-out
-      const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-
-      // Move Konva nodes DIRECTLY — no React state update per frame
-      const layer = layerRef.current;
-      if (layer) {
-        fromSnap.forEach(from => {
-          const to = toSnap.find(ss => ss.id === from.id);
-          if (!to) return;
-          const node = layer.findOne(`#${from.id}`);
-          if (node) {
-            const ddx = to.x - from.x;
-            const ddy = to.y - from.y;
-
-            // Reconstruct the waypoints exactly as they are configured or default
-            const wp1 = to.wp1 ?? { x: from.x + ddx * 0.33, y: from.y + ddy * 0.33 };
-            const wp2 = to.wp2 ?? { x: from.x + ddx * 0.66, y: from.y + ddy * 0.66 };
-
-            // Catmull-Rom Spline Evaluation (matches Konva Line tension=0.5)
-            const pts = [from, wp1, wp2, to];
-            const numSegments = 3;
-            let segment = Math.floor(ease * numSegments);
-            if (segment >= numSegments) segment = numSegments - 1;
-            const local_t = (ease * numSegments) - segment;
-
-            const p0 = segment === 0 ? pts[0]! : pts[segment - 1]!;
-            const p1 = pts[segment]!;
-            const p2 = pts[segment + 1]!;
-            const p3 = segment === numSegments - 1 ? pts[numSegments]! : pts[segment + 2]!;
-
-            const t2 = local_t * local_t;
-            const t3 = t2 * local_t;
-
-            const tau = 0.5; // matching Konva's tension default
-            const b1 = -tau * t3 + 2 * tau * t2 - tau * local_t;
-            const b2 = (2 - tau) * t3 + (tau - 3) * t2 + 1;
-            const b3 = (tau - 2) * t3 + (3 - 2 * tau) * t2 + tau * local_t;
-            const b4 = tau * t3 - tau * t2;
-
-            const bx = p0.x * b1 + p1.x * b2 + p2.x * b3 + p3.x * b4;
-            const by = p0.y * b1 + p1.y * b2 + p2.y * b3 + p3.y * b4;
-
-            node.position({ x: bx, y: by });
-          }
-        });
-
-        // After moving all shapes, snap bound balls to their owner's computed location
-        shapesRef.current.forEach(s => {
-          if (s.type === 'ball') {
-            const fromOwner = fromSnap.find(f => f.id === s.id)?.ballOwner;
-            const toOwner = toSnap.find(f => f.id === s.id)?.ballOwner;
-            // Only snap if ownership is maintained. If it's a pass, let the ball interpolate freely.
-            if (fromOwner && fromOwner === toOwner) {
-              const ballNode = layer.findOne(`#${s.id}`);
-              const ownerNode = layer.findOne(`#${fromOwner}`);
-              if (ballNode && ownerNode) {
-                ballNode.position({ x: ownerNode.x() + 12, y: ownerNode.y() + 12 });
-              }
-            }
-          }
-        });
-
-        layer.batchDraw();
-        voronoiLayerRef.current?.batchDraw();
-      }
-
-      if (t < 1) {
-        stepPlayRef.current = requestAnimationFrame(tick);
-      } else {
-        // Transition done: sync React state with final positions (once only)
-        setShapes(prev => prev.map(s => {
-          const snap = toSnap.find(ss => ss.id === s.id);
-          return snap ? { ...s, x: snap.x, y: snap.y, ballOwner: snap.ballOwner } : s;
-        }));
-        setCurrentStep(stepIdx);
-
-        const nextIdx = stepIdx + 1;
-        const allSteps = stepsRef.current;
-        if (nextIdx < allSteps.length) {
-          const nextFrom = allSteps[stepIdx]!;
-          const nextTo = allSteps[nextIdx]!;
-          const delay = autoAdvanceRef.current ? 0 : 300;
-          setTimeout(() => {
-            if (!isStepPlayingRef.current) return;
-            animateStepTransition(nextFrom, nextTo, nextIdx, durationMs);
-          }, delay);
-        } else {
-          if (isLooping) {
-            setCurrentStep(0);
-            setTimeout(() => {
-              const s0 = allSteps[0];
-              const s1 = allSteps[1];
-              if (s0 && s1 && isStepPlayingRef.current) animateStepTransition(s0, s1, 1, durationMs);
-            }, 500);
-          } else {
-            setCurrentStep(allSteps.length - 1);
-            isStepPlayingRef.current = false;
-            setIsStepPlaying(false);
-            stepPlayRef.current = null;
-          }
-        }
-      }
-    };
-    stepPlayRef.current = requestAnimationFrame(tick);
-  }, []); // no deps — uses refs only
-
-  const startStepPlay = useCallback(() => {
-    const allSteps = stepsRef.current;
-    if (allSteps.length < 2) return;
-    // Save current step first
-    saveCurrentStep();
-    // Start from step 0
-    setCurrentStep(0);
-    const snap0 = allSteps[0];
-    if (snap0) {
-      setShapes(prev => prev.map(s => {
-        const ss = snap0.find(x => x.id === s.id);
-        return ss ? { ...s, ...ss } : s;
-      }));
-    }
-    setIsStepPlaying(true);
-    const durationMs = stepPlaySpeed * 1000;
-    setTimeout(() => {
-      const s0 = stepsRef.current[0];
-      const s1 = stepsRef.current[1];
-      if (s0 && s1) animateStepTransition(s0, s1, 1, durationMs);
-    }, 50);
-  }, [saveCurrentStep, stepPlaySpeed, animateStepTransition]);
-
-  // Clean up on unmount
-  useEffect(() => () => { if (stepPlayRef.current) cancelAnimationFrame(stepPlayRef.current); }, []);
 
   // ─── Elements ───────────────────────────────────────────────────────────────
   const getNextLabel = (type: ElementType) => {
@@ -1060,98 +847,7 @@ export const InteractiveCanvas = ({ boardId, initialData, sport }: InteractiveCa
     return String(maxNum + 1);
   };
 
-  const addElement = (type: ElementType, dropX?: number, dropY?: number) => {
-    const id = `${type}-${Date.now()}`;
-    const label = getNextLabel(type);
-    const newShape: ShapeData = {
-      id, type, fill: elementColors[type],
-      x: dropX ?? stageSize.width / 2 + (Math.random() - 0.5) * 60,
-      y: dropY ?? stageSize.height / 2 + (Math.random() - 0.5) * 60,
-      rotation: 0,
-      label,
-    };
-    setShapes(prev => [...prev, newShape]);
-    // Force voronoi to update immediately upon adding a new player
-    if (type === "player-home" || type === "player-away") {
-      setTimeout(() => voronoiLayerRef.current?.batchDraw(), 10);
-    }
-    // If in step mode, also add this element to all existing steps so it doesn't disappear
-    if (mode === "step") {
-      setSteps(prev => prev.map(snap => [...snap, { id: newShape.id, x: newShape.x, y: newShape.y, rotation: 0 }]));
-    }
-  };
-  const deleteSelected = () => {
-    if (!selectedShapeId) return;
-    setShapes(prev => prev.filter(s => s.id !== selectedShapeId));
-    if (mode === "step") {
-      setSteps(prev => prev.map(snap => snap.filter(ss => ss.id !== selectedShapeId)));
-    }
-    setSelectedShapeId(null);
-  };
-
-  const rotateSelected = () => {
-    if (selectedShapeId) {
-      setShapes(prev => prev.map(s => {
-        if (s.id === selectedShapeId) {
-          const newRotation = (s.rotation ?? 0) + 90;
-          return { ...s, rotation: newRotation };
-        }
-        return s;
-      }));
-
-      if (mode === "step") {
-        setSteps(prev => {
-          const newSteps = [...prev];
-          const snap = [...newSteps[currentStep]!];
-          const idx = snap.findIndex(s => s.id === selectedShapeId);
-          if (idx !== -1) {
-            snap[idx] = { ...snap[idx]!, rotation: (snap[idx]!.rotation ?? 0) + 90 };
-          }
-          newSteps[currentStep] = snap;
-          return newSteps;
-        });
-      }
-    }
-  };
-  // Freehand and Geometry Drawing
-  const isDrawTool = (t: string) => ["pen", "eraser", "line", "arrow", "rect", "circle"].includes(t);
-  const handleStagePointerDown = (e: any) => {
-    // Deselect when clicking on the Stage background or the background image
-    const className = e.target?.getClassName?.() as string | undefined;
-    if (className === 'Stage' || className === 'Image') {
-      setSelectedShapeId(null);
-    }
-    if (!isDrawTool(activeTool)) return;
-    const pos = (e.target.getStage() as Konva.Stage | null)?.getPointerPosition();
-    if (!pos) return;
-    setIsDrawing(true); setCurrentLinePoints([pos.x, pos.y]);
-  };
-  const handleStagePointerMove = (e: any) => {
-    if (!isDrawTool(activeTool) || !isDrawing) return;
-    const pos = (e.target.getStage() as Konva.Stage | null)?.getPointerPosition();
-    if (!pos) return;
-    if (activeTool === "pen" || activeTool === "eraser") {
-      setCurrentLinePoints(prev => [...prev, pos.x, pos.y]);
-    } else {
-      setCurrentLinePoints(prev => [prev[0]!, prev[1]!, pos.x, pos.y]);
-    }
-  };
-  const handleStagePointerUp = () => {
-    if (!isDrawTool(activeTool) || !isDrawing) return;
-    setIsDrawing(false);
-    if (currentLinePoints.length >= 4) {
-      const isEraser = activeTool === "eraser";
-      setDrawLines(prev => [...prev, {
-        id: `draw-${Date.now()}`,
-        points: currentLinePoints,
-        color: isEraser ? "#000000" : penColor,
-        size: isEraser ? eraserSize * 10 : penSize,
-        isEraser,
-        type: activeTool,
-      }]);
-    }
-    setCurrentLinePoints([]);
-  };
+  // addElement, deleteSelected, rotateSelected, and stage pointer handlers are now provided by useBoardState and useDrawingTools hooks
 
   // Render shape
   const renderShape = (shape: ShapeData) => {
@@ -1699,12 +1395,35 @@ export const InteractiveCanvas = ({ boardId, initialData, sport }: InteractiveCa
               </div>
 
               {selectedShapeId && !isStepPlaying && (
-                <button onClick={deleteSelected} className="flex items-center gap-1 rounded px-2 py-1 text-xs bg-red-800 hover:bg-red-700 transition-colors">
-                  <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5"><path d="M6 3h4a1 1 0 00-4 0zm-2 0a3 3 0 016 0h3a.5.5 0 010 1h-.5l-.8 8.4A2 2 0 0110.2 14H5.8a2 2 0 01-2-1.6L3 4H2.5a.5.5 0 010-1H4zm1.5 3a.5.5 0 011 0v5a.5.5 0 01-1 0V6zm3 0a.5.5 0 011 0v5a.5.5 0 01-1 0V6z" /></svg>
-                  Del
-                </button>
+                <div className="flex items-center gap-2">
+                  {(() => {
+                    const selShape = shapes.find(s => s.id === selectedShapeId);
+                    if (selShape?.type === "player-home" || selShape?.type === "player-away") {
+                      return (
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white/5 border border-white/10">
+                          <span className="text-[10px] uppercase font-bold text-white/40">Label</span>
+                          <input
+                            type="text"
+                            maxLength={3}
+                            className="w-10 rounded border border-white/20 bg-gray-950 px-1 py-0.5 text-center text-xs font-bold text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                            value={selShape.label ?? ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setShapes(prev => prev.map(s => s.id === selectedShapeId ? { ...s, label: val } : s));
+                            }}
+                          />
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                  <button onClick={deleteSelected} className="flex items-center gap-1 rounded px-2 py-1 text-xs bg-red-800 hover:bg-red-700 transition-colors">
+                    <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5"><path d="M6 3h4a1 1 0 00-4 0zm-2 0a3 3 0 016 0h3a.5.5 0 010 1h-.5l-.8 8.4A2 2 0 0110.2 14H5.8a2 2 0 01-2-1.6L3 4H2.5a.5.5 0 010-1H4zm1.5 3a.5.5 0 011 0v5a.5.5 0 01-1 0V6zm3 0a.5.5 0 011 0v5a.5.5 0 01-1 0V6z" /></svg>
+                    Del
+                  </button>
+                </div>
               )}
-              <button onClick={handleSaveBoard} disabled={saveMutation.isPending}
+              <button onClick={() => handleSaveBoard(drawLines)} disabled={saveMutation.isPending}
                 className="flex items-center gap-1.5 rounded-lg bg-green-700 px-3 py-1.5 text-xs font-bold hover:bg-green-600 disabled:opacity-50 transition-colors">
                 <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5"><path d="M2 3a1 1 0 011-1h8l3 3v8a1 1 0 01-1 1H3a1 1 0 01-1-1V3zm5 8a2 2 0 104 0 2 2 0 00-4 0zM4 4h6V2H4v2z" /></svg>
                 {saveMutation.isPending ? "Saving..." : "Save"}
@@ -1881,8 +1600,12 @@ export const InteractiveCanvas = ({ boardId, initialData, sport }: InteractiveCa
 
             {stageSize.width > 0 && stageSize.height > 0 && (
               <Stage width={stageSize.width} height={stageSize.height}
-                onMouseDown={handleStagePointerDown} onMouseMove={handleStagePointerMove} onMouseUp={handleStagePointerUp}
-                onTouchStart={handleStagePointerDown} onTouchMove={handleStagePointerMove} onTouchEnd={handleStagePointerUp}
+                onMouseDown={(e) => handleStagePointerDown(e, setSelectedShapeId)} 
+                onMouseMove={handleStagePointerMove} 
+                onMouseUp={handleStagePointerUp}
+                onTouchStart={(e) => handleStagePointerDown(e, setSelectedShapeId)} 
+                onTouchMove={handleStagePointerMove} 
+                onTouchEnd={handleStagePointerUp}
                 onClick={(e) => { if (e.target === e.target.getStage()) setSelectedShapeId(null); }}
                 onTap={(e) => { if (e.target === e.target.getStage()) setSelectedShapeId(null); }}>
 

@@ -1,6 +1,62 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
+// ─── Whiteboard Data Schemas ────────────────────────────────────────────────
+const ElementTypeSchema = z.enum(["player-home", "player-away", "ball", "cone", "goal"]);
+
+const PointSchema = z.object({
+    x: z.number(),
+    y: z.number(),
+});
+
+const StepSnapshotItemSchema = z.object({
+    id: z.string(),
+    x: z.number(),
+    y: z.number(),
+    rotation: z.number().optional(),
+    wp1: PointSchema.optional(),
+    wp2: PointSchema.optional(),
+    ballOwner: z.string().nullable().optional(),
+});
+
+const FrameSchema = z.object({
+    x: z.number(),
+    y: z.number(),
+    time: z.number(),
+});
+
+const FreeStepSnapshotSchema = z.object({
+    initial: z.array(StepSnapshotItemSchema),
+    recordings: z.record(z.array(FrameSchema)),
+});
+
+const DrawLineSchema = z.object({
+    id: z.string(),
+    points: z.array(z.number()),
+    color: z.string(),
+    size: z.number(),
+    isEraser: z.boolean().optional(),
+    type: z.string().optional(),
+});
+
+const ShapeDataSchema = z.object({
+    id: z.string(),
+    type: ElementTypeSchema,
+    x: z.number(),
+    y: z.number(),
+    rotation: z.number().optional(),
+    fill: z.string(),
+    label: z.string().optional(),
+    ballOwner: z.string().nullable().optional(),
+});
+
+const BoardDataSchema = z.object({
+    shapes: z.array(ShapeDataSchema).optional(),
+    steps: z.array(z.array(StepSnapshotItemSchema)).optional(),
+    freeSteps: z.array(FreeStepSnapshotSchema).optional(),
+    drawLines: z.array(DrawLineSchema).optional(),
+});
+
 export const boardRouter = createTRPCRouter({
     create: protectedProcedure
         .input(z.object({
@@ -56,7 +112,7 @@ export const boardRouter = createTRPCRouter({
     update: protectedProcedure
         .input(z.object({
             id: z.string(),
-            data: z.any(), // Json type handling
+            data: BoardDataSchema, // Validated structured type
         }))
         .mutation(async ({ ctx, input }) => {
             // Verify ownership
