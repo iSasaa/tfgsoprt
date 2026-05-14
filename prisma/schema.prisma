@@ -1,0 +1,260 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider  = "postgresql"
+    // NOTE: When using mysql or sqlserver, uncomment the @db.Text annotations in model Account below
+    // Further reading:
+    // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
+    // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
+    url       = env("DATABASE_URL")
+    directUrl = env("DIRECT_URL")
+}
+
+
+
+// Necessary for Next auth
+model Account {
+    id                       String  @id @default(cuid())
+    userId                   String
+    type                     String
+    provider                 String
+    providerAccountId        String
+    refresh_token            String? // @db.Text
+    access_token             String? // @db.Text
+    expires_at               Int?
+    token_type               String?
+    scope                    String?
+    id_token                 String? // @db.Text
+    session_state            String?
+    user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    refresh_token_expires_in Int?
+
+    @@unique([provider, providerAccountId])
+}
+
+model Session {
+    id           String   @id @default(cuid())
+    sessionToken String   @unique
+    userId       String
+    expires      DateTime
+    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+    id            String    @id @default(cuid())
+    name          String?
+    email         String?   @unique
+    emailVerified DateTime?
+    image         String?
+    accounts      Account[]
+    sessions      Session[]
+    boards        Board[]
+    password      String?
+    clubs         Club[]
+    trainingSessions TrainingSession[]
+    calendarEvents   CalendarEvent[]
+    folders       Folder[]
+}
+
+
+model Board {
+    id        String   @id @default(cuid())
+    title     String
+    sport     String   @default("hockey")
+    data      Json     // Konva state
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    isFavorite Boolean @default(false)
+    order     Int      @default(0)
+    
+    userId    String
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    
+    sessionId String?
+    session   TrainingSession? @relation(fields: [sessionId], references: [id])
+
+    folderId  String?
+    folder    Folder?  @relation(fields: [folderId], references: [id])
+
+    @@index([userId, folderId])
+    @@index([userId])
+    @@index([folderId])
+    @@index([sessionId])
+}
+
+
+
+
+
+model VerificationToken {
+    identifier String
+    token      String   @unique
+    expires    DateTime
+
+    @@unique([identifier, token])
+}
+// Core Application Data
+
+model Club {
+    id        String   @id @default(cuid())
+    name      String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    
+    userId    String
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    
+    sports    Sport[]
+    calendarEvents CalendarEvent[]
+
+    @@index([userId])
+}
+
+model Sport {
+    id        String   @id @default(cuid())
+    name      String
+    
+    clubId    String
+    club      Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+    
+    teams     Team[]
+    
+    // Configurable visibility per user/context could be added here later, 
+    // but for now, implicit ownership via Club->User is sufficient.
+
+    @@index([clubId])
+}
+
+model Team {
+    id        String   @id @default(cuid())
+    name      String
+    
+    sportId   String
+    sport     Sport    @relation(fields: [sportId], references: [id], onDelete: Cascade)
+    
+    calendarEvents CalendarEvent[]
+    players       Player[]
+
+    @@index([sportId])
+}
+
+model TrainingSession {
+    id        String   @id @default(cuid())
+    title     String
+    sport     String   @default("hockey")
+    date      DateTime @default(now())
+    notes     String?  @default("")
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    isFavorite Boolean @default(false)
+    order     Int      @default(0)
+
+    userId    String
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    folderId  String?
+    folder    Folder?  @relation(fields: [folderId], references: [id])
+
+    boards    Board[]
+
+    @@index([userId, folderId])
+    @@index([userId])
+    @@index([folderId])
+}
+
+model CalendarEvent {
+    id        String   @id @default(cuid())
+    userId    String
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    
+    teamId    String?
+    team      Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+    clubId    String?
+    club      Club?    @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+    date      DateTime
+    time      String?
+    endTime   String?
+    title     String
+    type      String   @default("session") // session, match, training, other
+    sport     String?
+    sessionId String?
+    notes     String?  @default("")
+    
+    drills    EventDrill[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([userId, date])
+    @@index([userId, teamId, date])
+    @@index([userId])
+    @@index([teamId])
+    @@index([clubId])
+    @@index([sessionId])
+}
+
+model EventDrill {
+    id          String   @id @default(cuid())
+    eventId     String
+    event       CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+    
+    boardId     String?  // Reference to original repository board
+    localTitle  String
+    durationMin Int      @default(10)
+    boardData   Json     // Snapshot of the Konva JSON drawing
+    sport       String?
+    order       Int      @default(0)
+}
+
+model Folder {
+    id        String   @id @default(cuid())
+    name      String
+    type      String   @default("board") // "board" or "session"
+    isFavorite Boolean @default(false)
+    order     Int      @default(0)
+    
+    userId    String
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    
+    parentId  String?
+    parent    Folder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+    children  Folder[] @relation("FolderHierarchy")
+    
+    boards    Board[]
+    sessions  TrainingSession[]
+    
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    
+    sport     String? // optional filter, since boards and sessions have sports.
+    
+    @@index([userId, parentId])
+    @@index([userId])
+    @@index([parentId])
+}
+
+model Player {
+    id        String   @id @default(cuid())
+    name      String
+    surname   String?
+    number    String
+    position  String?
+    status    String   @default("active") // active, injured
+    order     Int      @default(0)
+    
+    teamId    String
+    team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([teamId])
+}
+

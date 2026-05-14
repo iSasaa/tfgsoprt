@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-40 -40 1080 580" width="100%" height="100%">
+  <!-- Parquet Pattern (Subtle and Realistic) -->
+  <defs>
+    <pattern id="wood" width="120" height="30" patternUnits="userSpaceOnUse">
+      <rect width="120" height="30" fill="#dfae7e" />
+      <line x1="0" y1="15" x2="120" y2="15" stroke="#d5a06c" stroke-width="1" />
+      <line x1="0" y1="30" x2="120" y2="30" stroke="#d5a06c" stroke-width="1" />
+      <line x1="30" y1="0" x2="30" y2="15" stroke="#d5a06c" stroke-width="1" />
+      <line x1="90" y1="15" x2="90" y2="30" stroke="#d5a06c" stroke-width="1" />
+    </pattern>
+  </defs>
+
+  <!-- Background Floor -->
+  <rect x="-40" y="-40" width="1080" height="580" fill="url(#wood)" />
+  
+  <g stroke="#ffffff" stroke-width="4">
+    <!-- Outer Border -->
+    <rect x="0" y="0" width="1000" height="500" fill="none" />
+    
+    <!-- Center Line -->
+    <line x1="500" y1="0" x2="500" y2="500" />
+    
+    <!-- Center Circle -->
+    <circle cx="500" cy="250" r="60" fill="none" />
+    <!-- Center straight segment -->
+    <line x1="500" y1="190" x2="500" y2="310" />
+    
+    <!-- ================= LEFT HALF ================= -->
+    
+    <!-- Paint (Free Throw Lane) - Slightly wider as requested -->
+    <rect x="0" y="155" width="230" height="190" fill="none" />
+    
+    <!-- Left Paint Ticks (Blocks) -->
+    <!-- Bottom side -->
+    <line x1="80" y1="345" x2="80" y2="355" />
+    <line x1="110" y1="345" x2="110" y2="355" />
+    <line x1="140" y1="345" x2="140" y2="355" />
+    <line x1="170" y1="345" x2="170" y2="355" />
+    <!-- Top side -->
+    <line x1="80" y1="155" x2="80" y2="145" />
+    <line x1="110" y1="155" x2="110" y2="145" />
+    <line x1="140" y1="155" x2="140" y2="145" />
+    <line x1="170" y1="155" x2="170" y2="145" />
+    
+    <!-- Free Throw Circle (Radius 60) -->
+    <!-- Solid half (outside the paint) -->
+    <path d="M 230 190 A 60 60 0 0 1 230 310" fill="none" />
+    <!-- Dashed half (inside the paint) -->
+    <path d="M 230 190 A 60 60 0 0 0 230 310" fill="none" stroke-dasharray="10,10" />
+    
+    <!-- 3-Point Line -->
+    <!-- Straight line ends at x=210, arc radius 265 makes it reach ~ x=275 -->
+    <path d="M 0 40 L 210 40 A 265 265 0 0 1 210 460 L 0 460" fill="none" />
+    
+    <!-- Restricted Area (Radius 45) -> Half circle around the basket center extending back towards the backboard -->
+    <path d="M 28 205 A 45 45 0 0 1 28 295" fill="none" stroke-width="3" />
+    
+    <!-- ================= RIGHT HALF ================= -->
+    
+    <!-- Paint (Free Throw Lane) -->
+    <rect x="770" y="155" width="230" height="190" fill="none" />
+    
+    <!-- Right Paint Ticks (Blocks) -->
+    <!-- Top side -->
+    <line x1="920" y1="155" x2="920" y2="145" />
+    <line x1="890" y1="155" x2="890" y2="145" />
+    <line x1="860" y1="155" x2="860" y2="145" />
+    <line x1="830" y1="155" x2="830" y2="145" />
+    <!-- Bottom side -->
+    <line x1="920" y1="345" x2="920" y2="355" />
+    <line x1="890" y1="345" x2="890" y2="355" />
+    <line x1="860" y1="345" x2="860" y2="355" />
+    <line x1="830" y1="345" x2="830" y2="355" />
+
+    <!-- Free Throw Circle -->
+    <!-- Solid half (outside the paint) -->
+    <path d="M 770 190 A 60 60 0 0 0 770 310" fill="none" />
+    <!-- Dashed half (inside the paint) -->
+    <path d="M 770 190 A 60 60 0 0 1 770 310" fill="none" stroke-dasharray="10,10" />
+    
+    <!-- 3-Point Line -->
+    <path d="M 1000 40 L 790 40 A 265 265 0 0 0 790 460 L 1000 460" fill="none" />
+
+    <!-- Restricted Area -->
+    <path d="M 972 205 A 45 45 0 0 0 972 295" fill="none" stroke-width="3" />
+  </g>
+
+  <!-- ================= HOOPS ================= -->
+  <!-- Left Hoop Assembly -->
+  <!-- Base structure (Black body) -->
+  <rect x="-30" y="230" width="30" height="40" fill="#222222" />
+  <rect x="0" y="245" width="25" height="10" fill="#222222" />
+  <!-- Rim Connection (Orange) -->
+  <rect x="25" y="247" width="8" height="6" fill="#f97316" />
+  <!-- Rim (Orange) -->
+  <circle cx="44" cy="250" r="11" fill="none" stroke="#f97316" stroke-width="4" />
+  <!-- Backboard (Black board) -->
+  <line x1="25" y1="215" x2="25" y2="285" stroke="#111111" stroke-width="6" stroke-linecap="round" />
+  
+  <!-- Right Hoop Assembly -->
+  <!-- Base structure (Black body) -->
+  <rect x="1000" y="230" width="30" height="40" fill="#222222" />
+  <rect x="975" y="245" width="25" height="10" fill="#222222" />
+  <!-- Rim Connection (Orange) -->
+  <rect x="967" y="247" width="8" height="6" fill="#f97316" />
+  <!-- Rim (Orange) -->
+  <circle cx="956" cy="250" r="11" fill="none" stroke="#f97316" stroke-width="4" />
+  <!-- Backboard (Black board) -->
+  <line x1="975" y1="215" x2="975" y2="285" stroke="#111111" stroke-width="6" stroke-linecap="round" />
+</svg>

@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 500" width="100%" height="100%">
+  <!-- White Background -->
+  <rect x="0" y="0" width="1000" height="500" rx="20" ry="20" fill="#ffffff" />
+  
+  <g stroke="#000000" stroke-width="3" fill="none">
+    <!-- Outer Border -->
+    <rect x="0" y="0" width="1000" height="500" rx="20" ry="20" />
+    
+    <!-- Center Line -->
+    <line x1="500" y1="0" x2="500" y2="500" />
+    
+    <!-- Center Circle -->
+    <circle cx="500" cy="250" r="80" />
+    <circle cx="500" cy="250" r="4" fill="#000000" />
+    
+    <!-- LEFT HALF -->
+    <!-- Left Penalty Box -->
+    <rect x="70" y="135" width="140" height="230" />
+    
+    <!-- Left Spots -->
+    <!-- Center spot on the penalty box line -->
+    <circle cx="210" cy="250" r="3" fill="#000000" stroke="none" />
+    <!-- Spot outside the penalty box -->
+    <circle cx="265" cy="250" r="3" fill="#000000" stroke="none" />
+    
+    <!-- Left Half Moon (Goal Crease) -->
+    <!-- 40px diameter -> radius 20 -->
+    <path d="M 70 230 A 20 20 0 0 1 70 270" />
+    
+    <!-- Left Goal Arc (Thin line behind the goal) -->
+    <path d="M 70 230 A 20 20 0 0 0 70 270" stroke-width="1" />
+    <!-- Left Goal Line (Orange) -->
+    <rect x="65" y="230" width="5" height="40" fill="#f97316" stroke-width="1" />
+    
+    <!-- RIGHT HALF -->
+    <!-- Right Penalty Box -->
+    <rect x="790" y="135" width="140" height="230" />
+    
+    <!-- Right Spots -->
+    <!-- Center spot on the penalty box line -->
+    <circle cx="790" cy="250" r="3" fill="#000000" stroke="none" />
+    <!-- Spot outside the penalty box -->
+    <circle cx="735" cy="250" r="3" fill="#000000" stroke="none" />
+    
+    <!-- Right Half Moon (Goal Crease) -->
+    <path d="M 930 230 A 20 20 0 0 0 930 270" />
+    
+    <!-- Right Goal Arc (Thin line behind the goal) -->
+    <path d="M 930 230 A 20 20 0 0 1 930 270" stroke-width="1" />
+    <!-- Right Goal Line (Orange) -->
+    <rect x="930" y="230" width="5" height="40" fill="#f97316" stroke-width="1" />
+  </g>
+</svg>
